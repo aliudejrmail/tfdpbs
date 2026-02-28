@@ -1,7 +1,7 @@
 {
   "name": "tfdpbs-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API para o sistema tfdpbs",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
@@ -16,8 +16,8 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "DIRCA - SEMSA",
+  "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",

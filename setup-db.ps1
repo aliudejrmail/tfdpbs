@@ -4,7 +4,7 @@
 $PSQL = "C:\Program Files\PostgreSQL\15\bin\psql.exe"
 $PSQL_USER = "postgres"
 $DB_NAME = "tfd"
-$NEW_PASSWORD = "tfd@2026"
+$NEW_PASSWORD = "<SUA_SENHA_SEGURA>" # [ALTERE AQUI] Utilize uma senha forte e segura
 
 Write-Host "====================================================="
 Write-Host "  TFD System - Configuracao do Banco de Dados"
@@ -27,7 +27,7 @@ else {
     Write-Host ""
     Write-Host "Execute manualmente em uma ferramenta de query (psql, pgAdmin, etc.):"
     Write-Host ""
-    Write-Host "  ALTER USER postgres WITH PASSWORD 'tfd@2026';"
+    Write-Host "  ALTER USER postgres WITH PASSWORD '<SUA_SENHA_SEGURA>';"
     Write-Host "  CREATE DATABASE tfd;"
     Write-Host ""
     Write-Host "Depois atualize o .env e rode: npx prisma migrate dev --name init"
@@ -57,7 +57,7 @@ Write-Host ""
 Write-Host "[3/4] Atualizando .env..."
 
 $envPath = ".\backend\.env"
-$line1 = 'DATABASE_URL="postgresql://postgres:tfd@2026@localhost:5432/tfd"'
+$line1 = 'DATABASE_URL="postgresql://postgres:<SUA_SENHA_SEGURA>@localhost:5432/tfd"'
 $line2 = 'JWT_SECRET="tfd_sistema_drca_super_secret_key_2026"'
 $line3 = 'JWT_EXPIRES_IN="8h"'
 $line4 = 'PORT=3333'

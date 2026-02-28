@@ -1,12 +1,12 @@
 {
   "name": "tfdpbs",
   "version": "1.0.0",
-  "description": "",
+  "description": "Sistema de Gestão de Tratamento Fora de Domicílio (TFD)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Sem testes configurados\""
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "DIRCA - SEMSA",
+  "license": "MIT"
 }

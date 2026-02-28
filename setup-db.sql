@@ -4,8 +4,8 @@
 -- Conectado como superuser (postgres)
 -- ================================================
 
--- 1. Definir senha do usuario postgres
-ALTER USER postgres WITH PASSWORD 'tfd@2026';
+-- 1. Definir senha do usuario postgres (Substitua <SUA_SENHA_SEGURA>)
+ALTER USER postgres WITH PASSWORD '<SUA_SENHA_SEGURA>';
 
 -- 2. Criar banco de dados tfd (se nao existir)
 -- OBS: Execute apenas se o banco 'tfd' nao existir ainda
