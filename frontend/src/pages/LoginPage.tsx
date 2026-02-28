@@ -36,7 +36,7 @@ export default function LoginPage() {
                     <div className="icon-wrap">
                         <Activity size={28} color="white" />
                     </div>
-                    <h1>TFD Acompanha</h1>
+                    <h1>tfdpbs</h1>
                     <p>Tratamento Fora de Domicílio</p>
                 </div>
 

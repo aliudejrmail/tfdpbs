@@ -47,7 +47,7 @@ export default function Layout() {
         <div className="layout">
             <nav className="sidebar">
                 <div className="sidebar-brand">
-                    <h1>TFD Acompanha</h1>
+                    <h1>tfdpbs</h1>
                     <p>DIRCA</p>
                 </div>
 

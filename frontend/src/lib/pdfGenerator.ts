@@ -96,7 +96,7 @@ export function gerarProtocoloEntrega(processo: ProcessoTFD) {
     const pageWidth = doc.internal.pageSize.getWidth();
 
     doc.setFontSize(10);
-    doc.text('DIRCA - TFD ACOMPANHA', 20, 15);
+    doc.text('DIRCA - TFDPBS', 20, 15);
     doc.text(format(new Date(), "dd/MM/yyyy HH:mm"), pageWidth - 60, 15);
 
     doc.setFontSize(14);

@@ -57,7 +57,7 @@ export default function ConsultaPublicaPage() {
                     <div className="icon-wrap">
                         <Activity size={28} color="white" />
                     </div>
-                    <h1>TFD Acompanha</h1>
+                    <h1>tfdpbs</h1>
                     <p>Consulta Pública de Processos</p>
                 </div>
 
