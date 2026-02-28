@@ -1,6 +1,6 @@
 -- ================================================
 -- TFD System - Script de Configuracao do Banco
--- Execute este arquivo no pgAdmin > Query Tool
+-- Execute este arquivo em uma ferramenta de query PostgreSQL (psql, pgAdmin, DBeaver, etc.)
 -- Conectado como superuser (postgres)
 -- ================================================
 
@@ -17,7 +17,7 @@ SELECT current_database() AS banco_atual;
 
 -- ================================================
 -- Feito! Agora rode no terminal:
---   cd c:\projetos_web\drca_tfd\backend
+--   cd ./backend
 --   npx prisma migrate dev --name init
 --   npx prisma db seed
 -- ================================================

@@ -25,7 +25,7 @@ else {
     Write-Host ""
     Write-Host "ATENCAO: Nao foi possivel conectar sem senha."
     Write-Host ""
-    Write-Host "Execute manualmente no pgAdmin ou SQL Shell:"
+    Write-Host "Execute manualmente em uma ferramenta de query (psql, pgAdmin, etc.):"
     Write-Host ""
     Write-Host "  ALTER USER postgres WITH PASSWORD 'tfd@2026';"
     Write-Host "  CREATE DATABASE tfd;"
@@ -56,7 +56,7 @@ else {
 Write-Host ""
 Write-Host "[3/4] Atualizando .env..."
 
-$envPath = "C:\projetos_web\drca_tfd\backend\.env"
+$envPath = ".\backend\.env"
 $line1 = 'DATABASE_URL="postgresql://postgres:tfd@2026@localhost:5432/tfd"'
 $line2 = 'JWT_SECRET="tfd_sistema_drca_super_secret_key_2026"'
 $line3 = 'JWT_EXPIRES_IN="8h"'
