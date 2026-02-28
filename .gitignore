@@ -1,5 +1,15 @@
+# Dependencies
 node_modules/
-dist/
-.env
-*.log
+.npm
+**/.env
+**/dist/
+**/.temp/
+**/.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store
+Thumbs.db
