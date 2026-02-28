@@ -1,0 +1,353 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Perfil {
+  UBS
+  REGULACAO
+  SEC_ADM
+  ATENDENTE
+}
+
+enum StatusProcesso {
+  PENDENTE
+  EM_ANALISE
+  APROVADO
+  NEGADO
+  AGENDADO
+  CONCLUIDO
+  CANCELADO
+  RECURSO
+}
+
+enum TipoTransporte {
+  ONIBUS
+  VAN
+  AMBULANCIA
+  AEREO
+  PROPRIO
+}
+
+enum SexoPaciente {
+  MASCULINO
+  FEMININO
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  login     String   @unique
+  senha     String
+  perfil    Perfil
+  ativo     Boolean  @default(true)
+  unidadeId String?
+  unidade   Unidade? @relation(fields: [unidadeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  processosAbertos  ProcessoTFD[] @relation("ProcessoAbertoPor")
+  processosRegulados ProcessoTFD[] @relation("ProcessoReguladoPor")
+  historico         HistoricoProcesso[]
+  logs              Log[]
+  ajudasCustoCriadas AjudaCusto[] @relation("AjudaCustoCriadaPor")
+  diariasCriadas     Diaria[]     @relation("DiariaCriadaPor")
+  valesCriados       ValeHospedagem[] @relation("ValeCriadoPor")
+
+  @@map("usuarios")
+}
+
+model Unidade {
+  id       String    @id @default(uuid())
+  nome     String
+  cnes     String    @unique
+  tipo     String    // UBS, Hospital, etc.
+  ativo    Boolean   @default(true)
+  usuarios Usuario[]
+  processos ProcessoTFD[]
+
+  @@map("unidades")
+}
+
+model Paciente {
+  id           String        @id @default(uuid())
+  nome         String
+  cpf          String        @unique
+  dataNascimento DateTime
+  sexo         SexoPaciente
+  nomeMae      String
+  telefone     String?
+  endereco     String
+  bairro       String
+  cidade       String
+  uf           String        @default("AM")
+  cep          String?
+  cartaoSus    String?       @unique
+  ativo        Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  processos   ProcessoTFD[]
+
+  @@map("pacientes")
+}
+
+model ProcessoTFD {
+  id               String         @id @default(uuid())
+  numero           String         @unique // TFD-2026-00001
+  pacienteId       String
+  paciente         Paciente       @relation(fields: [pacienteId], references: [id])
+  unidadeOrigemId  String
+  unidadeOrigem    Unidade        @relation(fields: [unidadeOrigemId], references: [id])
+  
+  // Dados da Solicitação
+  especialidade    String
+  cid              String         // CID-10
+  descricaoClinica String         @db.Text
+  medicoSolicitante String
+  crmMedico        String?
+  dataConsulta     DateTime?      // Data pretendida para consulta
+  
+  // Destino
+  cidadeDestino    String
+  ufDestino        String
+  hospitalDestino  String?
+  medicoDestino    String?
+  
+  // Transporte
+  tipoTransporte   TipoTransporte
+  acompanhante     Boolean        @default(false)
+  nomeAcompanhante String?
+  cpfAcompanhante  String?
+  
+  // Status e Controle
+  status           StatusProcesso @default(PENDENTE)
+  prioridade       Int            @default(1) // 1=Normal, 2=Urgente, 3=Emergência
+  
+  // Agendamento
+  dataAgendada     DateTime?
+  localAtendimento String?
+  
+  // Documentação
+  observacoes      String?        @db.Text
+  motivoNegativa   String?        @db.Text
+  
+  // Auditoria
+  abertoPorId      String
+  abertoPor        Usuario        @relation("ProcessoAbertoPor", fields: [abertoPorId], references: [id])
+  reguladoPorId    String?
+  reguladoPor      Usuario?       @relation("ProcessoReguladoPor", fields: [reguladoPorId], references: [id])
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  historico        HistoricoProcesso[]
+  documentos       Documento[]
+  passagens        Passagem[]
+  viagens          PassageiroViagem[]
+  ajudasCusto      AjudaCusto[]
+  valesHospedagem  ValeHospedagem[]
+
+  @@map("processos_tfd")
+}
+
+model HistoricoProcesso {
+  id          String         @id @default(uuid())
+  processoId  String
+  processo    ProcessoTFD    @relation(fields: [processoId], references: [id])
+  usuarioId   String
+  usuario     Usuario        @relation(fields: [usuarioId], references: [id])
+  statusAnterior StatusProcesso?
+  statusNovo  StatusProcesso
+  descricao   String         @db.Text
+  createdAt   DateTime       @default(now())
+
+  @@map("historico_processos")
+}
+
+model Documento {
+  id          String      @id @default(uuid())
+  processoId  String
+  processo    ProcessoTFD @relation(fields: [processoId], references: [id])
+  nome        String
+  tipo        String      // laudos, exames, etc.
+  url         String
+  createdAt   DateTime    @default(now())
+
+  @@map("documentos")
+}
+
+model Passagem {
+  id          String       @id @default(uuid())
+  processoId  String
+  processo    ProcessoTFD  @relation(fields: [processoId], references: [id])
+  linhaId     String?
+  linha       Linha?  @relation(fields: [linhaId], references: [id])
+  tipo        String       // IDA ou VOLTA
+  dataViagem  DateTime
+  numeroPassagem String?
+  empresa     String?
+  valor       Decimal?     @db.Decimal(10, 2)
+  observacoes String?
+  createdAt   DateTime     @default(now())
+
+  @@map("passagens")
+}
+
+model Linha {
+  id        String     @id @default(uuid())
+  nome      String     // Ex: Itacoatiara x Manaus
+  empresa   String?
+  origem    String
+  destino   String
+  horarios  String?    // Ex: 08:00, 14:00, 22:00
+  ativo     Boolean    @default(true)
+  passagens Passagem[]
+  viagens   Viagem[]
+  createdAt DateTime   @default(now())
+
+  @@map("linhas_onibus")
+}
+
+model Veiculo {
+  id        String   @id @default(uuid())
+  placa     String   @unique
+  modelo    String
+  capacidade Int
+  ativo     Boolean  @default(true)
+  viagens   Viagem[]
+  createdAt DateTime @default(now())
+
+  @@map("veiculos")
+}
+
+model Motorista {
+  id        String   @id @default(uuid())
+  nome      String
+  cpf       String   @unique
+  cnh       String
+  telefone  String?
+  ativo     Boolean  @default(true)
+  viagens   Viagem[]
+  diarias   Diaria[]
+  createdAt DateTime @default(now())
+
+  @@map("motoristas")
+}
+
+model Viagem {
+  id            String    @id @default(uuid())
+  dataPartida   DateTime
+  dataRetorno   DateTime?
+  veiculoId     String?
+  veiculo       Veiculo?  @relation(fields: [veiculoId], references: [id])
+  motoristaId   String?
+  motorista     Motorista? @relation(fields: [motoristaId], references: [id])
+  linhaId       String?
+  linha         Linha?     @relation(fields: [linhaId], references: [id])
+  status        String    @default("PLANEJADA") // PLANEJADA, EM_CURSO, CONCLUIDA, CANCELADA
+  observacoes   String?   @db.Text
+  passageiros   PassageiroViagem[]
+  diarias       Diaria[]
+  createdAt     DateTime  @default(now())
+
+  @@map("viagens")
+}
+
+model PassageiroViagem {
+  id           String      @id @default(uuid())
+  viagemId     String
+  viagem       Viagem      @relation(fields: [viagemId], references: [id])
+  processoId   String
+  processo     ProcessoTFD @relation(fields: [processoId], references: [id])
+  acompanhante Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  @@map("passageiros_viagem")
+}
+
+model AjudaCusto {
+  id           String      @id @default(uuid())
+  processoId   String
+  processo     ProcessoTFD @relation(fields: [processoId], references: [id])
+  tipo         String      // ALIMENTACAO, TRANSPORTE_URBANO, HOSPEDAGEM, OUTROS
+  descricao    String?
+  valor        Decimal     @db.Decimal(10, 2)
+  dataReferencia DateTime
+  status       String      @default("PENDENTE") // PENDENTE, APROVADO, PAGO, CANCELADO
+  criadoPorId  String
+  criadoPor    Usuario     @relation("AjudaCustoCriadaPor", fields: [criadoPorId], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@map("ajudas_custo")
+}
+
+model Diaria {
+  id            String     @id @default(uuid())
+  motoristaId   String
+  motorista     Motorista  @relation(fields: [motoristaId], references: [id])
+  viagemId      String
+  viagem        Viagem     @relation(fields: [viagemId], references: [id])
+  tipo          String     // COMPLETA, MEIA
+  valor         Decimal    @db.Decimal(10, 2)
+  dataReferencia DateTime
+  status        String     @default("PENDENTE") // PENDENTE, APROVADO, PAGO
+  criadoPorId   String
+  criadoPor     Usuario    @relation("DiariaCriadaPor", fields: [criadoPorId], references: [id])
+  createdAt     DateTime   @default(now())
+
+  @@map("diarias")
+}
+
+model CasaApoio {
+  id          String   @id @default(uuid())
+  nome        String
+  endereco    String?
+  cidade      String
+  telefone    String?
+  totalLeitos Int      @default(10)
+  ativo       Boolean  @default(true)
+  vales       ValeHospedagem[]
+  createdAt   DateTime @default(now())
+
+  @@map("casas_apoio")
+}
+
+model ValeHospedagem {
+  id            String      @id @default(uuid())
+  processoId    String
+  processo      ProcessoTFD @relation(fields: [processoId], references: [id])
+  casaApoioId   String
+  casaApoio     CasaApoio   @relation(fields: [casaApoioId], references: [id])
+  dataEntrada   DateTime
+  dataSaida     DateTime?
+  acompanhante  Boolean     @default(false)
+  status        String      @default("ATIVO") // ATIVO, ENCERRADO, CANCELADO
+  observacoes   String?     @db.Text
+  criadoPorId   String
+  criadoPor     Usuario     @relation("ValeCriadoPor", fields: [criadoPorId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@map("vales_hospedagem")
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  acao      String   // CREATE, UPDATE, DELETE, LOGIN, logout
+  entidade  String   // PACIENTE, PROCESSO, USUARIO, UNIDADE
+  entidadeId String?
+  detalhes  String?  @db.Text
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@map("logs")
+}
