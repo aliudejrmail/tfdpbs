@@ -11,22 +11,23 @@ export const processosRouter = Router();
 processosRouter.use(authenticate);
 
 // Upload de documento
-import type { Request as ExpressRequest } from 'express';
-interface MulterRequest extends ExpressRequest {
+// Upload de documento
+interface MulterRequest extends Request {
     file?: Express.Multer.File;
 }
 
-processosRouter.post('/:id/documentos', authorize('UBS', 'ATENDENTE', 'SEC_ADM', 'REGULACAO'), upload.single('file'), async (req: MulterRequest, res: Response) => {
+processosRouter.post('/:id/documentos', authorize('UBS', 'ATENDENTE', 'SEC_ADM', 'REGULACAO'), upload.single('file'), async (req: Request, res: Response) => {
+    const multerReq = req as MulterRequest;
     const processoId = req.params.id as string;
     const { tipo } = req.body;
-    if (!req.file) return res.status(400).json({ error: 'Arquivo não enviado.' });
+    if (!multerReq.file) return res.status(400).json({ error: 'Arquivo não enviado.' });
     const processo = await prisma.processoTFD.findUnique({ where: { id: processoId } });
     if (!processo) return res.status(404).json({ error: 'Processo não encontrado.' });
-    const url = `/uploads/${req.file.filename}`;
+    const url = `/uploads/${multerReq.file.filename}`;
     const documento = await prisma.documento.create({
         data: {
             processoId,
-            nome: req.file.originalname,
+            nome: multerReq.file.originalname,
             tipo: tipo || 'outro',
             url,
         }
