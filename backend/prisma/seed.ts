@@ -69,8 +69,9 @@ async function main() {
         },
     });
 
-    console.log('✅ Usuários criados');
-    console.log('\n📋 Credenciais de acesso:');
+    console.log('✅ Usuários processados (Upsert)');
+    console.log('\n📋 Nota: O seed não altera a senha de usuários já existentes.');
+    console.log('📋 Credenciais padrão (apenas para novos bancos):');
     console.log('  admin / 123456 → SEC_ADM');
     console.log('  regulacao / 123456 → REGULACAO');
     console.log('  ubs_central / 123456 → UBS');

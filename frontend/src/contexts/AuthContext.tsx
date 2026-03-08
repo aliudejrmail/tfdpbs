@@ -26,12 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [token, setToken] = useState<string | null>(() =>
         localStorage.getItem('tfd_token')
     );
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (token && !user) {
-            api.get('/auth/me').then(r => setUser(r.data)).catch(() => logout());
-        }
+        const checkAuth = async () => {
+            if (token && !user) {
+                try {
+                    console.log('[Auth] Validando token no refresh...');
+                    const r = await api.get('/auth/me');
+                    setUser(r.data);
+                    console.log('[Auth] Usuário recuperado:', r.data.login);
+                } catch (err) {
+                    console.error('[Auth] Erro ao validar token:', err);
+                    logout();
+                }
+            }
+            setLoading(false);
+        };
+        checkAuth();
     }, [token]);
 
     const login = async (login: string, senha: string) => {

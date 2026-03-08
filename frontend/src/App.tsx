@@ -23,8 +23,17 @@ import Layout from './components/Layout';
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
 
-  if (loading) return <div>Carregando...</div>;
-  if (!token) return <Navigate to="/login" />;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+          <p>Validando acesso...</p>
+        </div>
+      </div>
+    );
+  }
+  if (!token) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }
