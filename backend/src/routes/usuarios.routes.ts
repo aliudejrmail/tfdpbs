@@ -35,13 +35,20 @@ const senhaSchema = z.object({
 });
 
 usuariosRouter.patch('/me/senha', async (req: Request, res: Response) => {
+    console.log('[PATCH] /api/usuarios/me/senha hit');
     try {
-        const { senhaAtual, novaSenha } = senhaSchema.parse(req.body);
         const userId = req.user?.userId;
+
+        if (!userId) {
+            res.status(401).json({ error: 'Sessão inválida. Por favor, faça login novamente.' });
+            return;
+        }
+
+        const { senhaAtual, novaSenha } = senhaSchema.parse(req.body);
 
         const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
         if (!usuario) {
-            res.status(404).json({ error: 'Usuário não encontrado.' });
+            res.status(404).json({ error: 'Usuário não encontrado no banco de dados.' });
             return;
         }
 
