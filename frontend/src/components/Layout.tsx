@@ -20,6 +20,7 @@ import {
     Stethoscope,
     KeyRound,
     X,
+    Plane,
 } from 'lucide-react';
 import type { Perfil } from '../types';
 
@@ -95,14 +96,19 @@ export default function Layout() {
                         Processos TFD
                     </NavLink>
 
+                    <NavLink to="/pacientes" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <ClipboardList size={18} />
+                        Pacientes
+                    </NavLink>
+
                     <NavLink to="/fila" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <ListOrdered size={18} />
                         Fila de Espera
                     </NavLink>
 
-                    <NavLink to="/pacientes" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
-                        <ClipboardList size={18} />
-                        Pacientes
+                    <NavLink to="/passagens-aereas" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <Plane size={18} />
+                        Passagens Aéreas
                     </NavLink>
 
                     <NavLink to="/linhas-onibus" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>

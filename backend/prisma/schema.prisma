@@ -60,6 +60,9 @@ model Usuario {
   ajudasCustoCriadas AjudaCusto[] @relation("AjudaCustoCriadaPor")
   diariasCriadas     Diaria[]     @relation("DiariaCriadaPor")
   valesCriados       ValeHospedagem[] @relation("ValeCriadoPor")
+  
+  demandasSolicitadas DemandaPassagemAerea[] @relation("PassagemSolicitadaPor")
+  demandasAutorizadas DemandaPassagemAerea[] @relation("PassagemAutorizadaPor")
 
   @@map("usuarios")
 }
@@ -173,6 +176,7 @@ model ProcessoTFD {
   viagens          PassageiroViagem[]
   ajudasCusto      AjudaCusto[]
   valesHospedagem  ValeHospedagem[]
+  demandasPassagens DemandaPassagemAerea[]
 
   @@map("processos_tfd")
 }
@@ -369,4 +373,47 @@ model Log {
   createdAt DateTime @default(now())
 
   @@map("logs")
+}
+
+enum StatusPassagemAerea {
+  PENDENTE        // Aguardando análise da DIRCA
+  AUTORIZADO      // Pronto para compra
+  EMITIDO         // Bilhete comprado (PNR gerado)
+  CANCELADO       // Requisição cancelada
+  CONCLUIDO       // Viagem realizada e prestação de contas feita
+}
+
+model DemandaPassagemAerea {
+  id              String             @id @default(uuid())
+  processoId      String
+  processo        ProcessoTFD        @relation(fields: [processoId], references: [id])
+  
+  // Detalhes do Voo
+  origem          String             @default("Parauapebas")
+  destino         String
+  dataIda         DateTime
+  dataVolta       DateTime?
+  
+  // Justificativa e Documentação
+  justificativa   String             @db.Text
+  necessitaUrgencia Boolean          @default(false)
+  
+  // Status e Controle
+  status          StatusPassagemAerea @default(PENDENTE)
+  
+  // Dados da Emissão (Preenchidos quando Status = EMITIDO)
+  pnr             String?            // Localizador do Voo
+  companhiaAerea  String?
+  valorTotal      Decimal?           @db.Decimal(10, 2)
+  
+  // Auditoria
+  solicitadoPorId String
+  solicitadoPor   Usuario            @relation("PassagemSolicitadaPor", fields: [solicitadoPorId], references: [id])
+  autorizadoPorId String?
+  autorizadoPor   Usuario?           @relation("PassagemAutorizadaPor", fields: [autorizadoPorId], references: [id])
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@map("demandas_passagens_aereas")
 }

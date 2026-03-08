@@ -6,9 +6,23 @@ import { prisma, selectUsuarioPublico } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { StatusProcesso } from '@prisma/client';
 import { logAction } from '../lib/logger';
+import { Prisma } from '@prisma/client';
 
 export const processosRouter = Router();
 processosRouter.use(authenticate);
+
+// Helper para obter query params como string
+function getQueryParam(query: Request['query'], key: string): string | undefined {
+    const value = query[key];
+    if (typeof value === 'object' && value !== null) return undefined;
+    return Array.isArray(value) ? value[0] : value;
+}
+
+// Helper para obter params como string
+function getParam(params: Request['params'], key: string): string {
+    const value = params[key];
+    return Array.isArray(value) ? value[0] : value;
+}
 
 // Upload de documento
 // Upload de documento
@@ -18,7 +32,7 @@ interface MulterRequest extends Request {
 
 processosRouter.post('/:id/documentos', authorize('UBS', 'ATENDENTE', 'SEC_ADM', 'REGULACAO'), upload.single('file'), async (req: Request, res: Response) => {
     const multerReq = req as MulterRequest;
-    const processoId = req.params.id as string;
+    const processoId = getParam(req.params, 'id');
     const { tipo } = req.body;
     if (!multerReq.file) return res.status(400).json({ error: 'Arquivo não enviado.' });
     const processo = await prisma.processoTFD.findUnique({ where: { id: processoId } });
@@ -78,13 +92,17 @@ processosRouter.get('/especialidades', authenticate, async (req: Request, res: R
 });
 
 processosRouter.get('/', async (req: Request, res: Response) => {
-    const { search, status, prioridade, unidadeId, page = '1', limit = '20' } = req.query;
+    const search = getQueryParam(req.query, 'search');
+    const status = getQueryParam(req.query, 'status');
+    const prioridade = getQueryParam(req.query, 'prioridade');
+    const unidadeId = getQueryParam(req.query, 'unidadeId');
+    const page = getQueryParam(req.query, 'page') || '1';
+    const limit = getQueryParam(req.query, 'limit') || '20';
     const perfil = req.user!.perfil;
     const userId = req.user!.userId;
     const skip = (Number(page) - 1) * Number(limit);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
+    const where: Prisma.ProcessoTFDWhereInput = {};
 
     if (perfil === 'UBS') {
         const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
@@ -92,23 +110,23 @@ processosRouter.get('/', async (req: Request, res: Response) => {
     }
 
     if (status) {
-        if (String(status).includes(',')) {
-            where.status = { in: String(status).split(',') };
+        if (status.includes(',')) {
+            where.status = { in: status.split(',') as StatusProcesso[] };
         } else {
-            where.status = status;
+            where.status = status as StatusProcesso;
         }
     }
     if (prioridade) where.prioridade = Number(prioridade);
     if (unidadeId) where.unidadeOrigemId = unidadeId;
     if (search) {
         where.OR = [
-            { numero: { contains: String(search), mode: 'insensitive' } },
-            { paciente: { nome: { contains: String(search), mode: 'insensitive' } } },
-            { especialidade: { contains: String(search), mode: 'insensitive' } },
+            { numero: { contains: search, mode: 'insensitive' } },
+            { paciente: { nome: { contains: search, mode: 'insensitive' } } },
+            { especialidade: { contains: search, mode: 'insensitive' } },
         ];
     }
 
-    const orderBy: any[] = [];
+    const orderBy: Prisma.ProcessoTFDOrderByWithRelationInput[] = [];
     if (req.query.sort === 'fila') {
         orderBy.push({ prioridade: 'desc' });
         orderBy.push({ createdAt: 'asc' }); // FIFO - mais antigo primeiro
@@ -138,7 +156,7 @@ processosRouter.get('/', async (req: Request, res: Response) => {
 
 processosRouter.get('/:id', async (req: Request, res: Response) => {
     const processo = await prisma.processoTFD.findUnique({
-        where: { id: req.params.id as string },
+        where: { id: getParam(req.params, 'id') },
         include: {
             paciente: true,
             unidadeOrigem: true,
@@ -198,11 +216,11 @@ processosRouter.post('/', authorize('UBS', 'ATENDENTE', 'SEC_ADM'), async (req: 
 processosRouter.put('/:id', authorize('REGULACAO', 'SEC_ADM', 'ATENDENTE'), async (req: Request, res: Response) => {
     try {
         const data = processoSchema.partial().parse(req.body);
-        const processoAntigo = await prisma.processoTFD.findUnique({ where: { id: req.params.id as string } });
+        const processoAntigo = await prisma.processoTFD.findUnique({ where: { id: getParam(req.params, 'id') } });
         if (!processoAntigo) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }
 
         const processo = await prisma.processoTFD.update({
-            where: { id: req.params.id as string },
+            where: { id: getParam(req.params, 'id') },
             data,
         });
 
@@ -246,7 +264,7 @@ const transicaoSchema = z.object({
 processosRouter.patch('/:id/status', authorize('REGULACAO', 'SEC_ADM'), async (req: Request, res: Response) => {
     try {
         const { statusNovo, descricao, dataAgendada, localAtendimento, motivoNegativa } = transicaoSchema.parse(req.body);
-        const processo = await prisma.processoTFD.findUnique({ where: { id: req.params.id as string } });
+        const processo = await prisma.processoTFD.findUnique({ where: { id: getParam(req.params, 'id') } });
         if (!processo) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -258,11 +276,12 @@ processosRouter.patch('/:id/status', authorize('REGULACAO', 'SEC_ADM'), async (r
             updateData.reguladoPorId = req.user!.userId;
         }
 
+        const processoId = getParam(req.params, 'id');
         const [processoAtualizado] = await prisma.$transaction([
-            prisma.processoTFD.update({ where: { id: req.params.id as string }, data: updateData }),
+            prisma.processoTFD.update({ where: { id: processoId }, data: updateData }),
             prisma.historicoProcesso.create({
                 data: {
-                    processoId: req.params.id as string,
+                    processoId,
                     usuarioId: req.user!.userId,
                     statusAnterior: processo.status,
                     statusNovo,
@@ -275,7 +294,7 @@ processosRouter.patch('/:id/status', authorize('REGULACAO', 'SEC_ADM'), async (r
             req,
             acao: 'UPDATE',
             entidade: 'PROCESSO',
-            entidadeId: (req.params.id as string),
+            entidadeId: processoId,
             detalhes: `Status alterado de ${processo.status} para ${statusNovo}.`
         });
 
@@ -297,7 +316,7 @@ processosRouter.post('/:id/passagens', authorize('REGULACAO', 'SEC_ADM', 'ATENDE
     });
     try {
         const data = schema.parse(req.body);
-        const passagem = await prisma.passagem.create({ data: { ...data, processoId: req.params.id as string } });
+        const passagem = await prisma.passagem.create({ data: { ...data, processoId: getParam(req.params, 'id') } });
         res.status(201).json(passagem);
     } catch (err) {
         if (err instanceof z.ZodError) { res.status(400).json({ error: err.errors }); return; }

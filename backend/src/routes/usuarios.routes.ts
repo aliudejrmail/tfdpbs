@@ -8,6 +8,12 @@ import { logAction } from '../lib/logger';
 export const usuariosRouter = Router();
 usuariosRouter.use(authenticate);
 
+// Helper para obter params como string
+function getParam(params: Request['params'], key: string): string {
+    const value = params[key];
+    return Array.isArray(value) ? value[0] : value;
+}
+
 const usuarioSchema = z.object({
     nome: z.string().min(3),
     login: z.string().min(3),
@@ -112,7 +118,7 @@ usuariosRouter.put('/:id', authorize('SEC_ADM'), async (req: Request, res: Respo
         const data = usuarioSchema.partial().parse(req.body);
         const update: Record<string, unknown> = { ...data };
 
-        const currentUsuario = await prisma.usuario.findUnique({ where: { id: req.params.id as string } });
+        const currentUsuario = await prisma.usuario.findUnique({ where: { id: getParam(req.params, 'id') } });
         if (!currentUsuario) {
             res.status(404).json({ error: 'Usuário não encontrado.' });
             return;
@@ -132,7 +138,7 @@ usuariosRouter.put('/:id', authorize('SEC_ADM'), async (req: Request, res: Respo
 
         if (data.senha) update.senha = await bcrypt.hash(data.senha, 10);
         const usuario = await prisma.usuario.update({
-            where: { id: req.params.id as string },
+            where: { id: getParam(req.params, 'id') },
             data: update,
             select: selectSemSenha,
         });
@@ -144,7 +150,7 @@ usuariosRouter.put('/:id', authorize('SEC_ADM'), async (req: Request, res: Respo
 });
 
 usuariosRouter.patch('/:id/toggle-ativo', authorize('SEC_ADM'), async (req: Request, res: Response) => {
-    const usuario = await prisma.usuario.findUnique({ where: { id: req.params.id as string } });
+    const usuario = await prisma.usuario.findUnique({ where: { id: getParam(req.params, 'id') } });
     if (!usuario) { res.status(404).json({ error: 'Usuário não encontrado.' }); return; }
 
     if (usuario.login === 'admin') {
@@ -153,7 +159,7 @@ usuariosRouter.patch('/:id/toggle-ativo', authorize('SEC_ADM'), async (req: Requ
     }
 
     const updated = await prisma.usuario.update({
-        where: { id: req.params.id as string },
+        where: { id: getParam(req.params, 'id') },
         data: { ativo: !usuario.ativo },
         select: selectSemSenha,
     });

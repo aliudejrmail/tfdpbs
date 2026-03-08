@@ -17,6 +17,7 @@ import { financeiroRouter } from './routes/financeiro.routes';
 import { casaApoioRouter } from './routes/casa-apoio.routes';
 import { qrcodeRouter } from './routes/qrcode.routes';
 import { medicosRouter } from './routes/medicos.routes';
+import { demandasPassagensRouter } from './routes/demandas-passagens.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -54,11 +55,12 @@ app.use('/api/financeiro', financeiroRouter);
 app.use('/api/casas-apoio', casaApoioRouter);
 app.use('/api/qrcode', qrcodeRouter);
 app.use('/api/medicos', medicosRouter);
+app.use('/api/passagens-aereas', demandasPassagensRouter);
 
 // Error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🚀 TFD API running on port ${PORT}`);
 });
 

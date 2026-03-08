@@ -7,6 +7,19 @@ import { logAction } from '../lib/logger';
 export const pacientesRouter = Router();
 pacientesRouter.use(authenticate);
 
+// Helper para obter query params como string
+function getQueryParam(query: Request['query'], key: string): string | undefined {
+    const value = query[key];
+    if (typeof value === 'object' && value !== null) return undefined;
+    return Array.isArray(value) ? value[0] : value;
+}
+
+// Helper para obter params como string
+function getParam(params: Request['params'], key: string): string {
+    const value = params[key];
+    return Array.isArray(value) ? value[0] : value;
+}
+
 const pacienteSchema = z.object({
     nome: z.string().min(3),
     cpf: z.string().length(11),
@@ -24,14 +37,16 @@ const pacienteSchema = z.object({
 
 // List
 pacientesRouter.get('/', async (req: Request, res: Response) => {
-    const { search, page = '1', limit = '20' } = req.query;
+    const search = getQueryParam(req.query, 'search');
+    const page = getQueryParam(req.query, 'page') || '1';
+    const limit = getQueryParam(req.query, 'limit') || '20';
     const skip = (Number(page) - 1) * Number(limit);
     const where = search
         ? {
             OR: [
-                { nome: { contains: String(search), mode: 'insensitive' as const } },
-                { cpf: { contains: String(search) } },
-                { cartaoSus: { contains: String(search) } },
+                { nome: { contains: search, mode: 'insensitive' as const } },
+                { cpf: { contains: search } },
+                { cartaoSus: { contains: search } },
             ],
         }
         : {};
@@ -44,7 +59,7 @@ pacientesRouter.get('/', async (req: Request, res: Response) => {
 
 // Get by ID
 pacientesRouter.get('/:id', async (req: Request, res: Response) => {
-    const paciente = await prisma.paciente.findUnique({ where: { id: req.params.id as string } });
+    const paciente = await prisma.paciente.findUnique({ where: { id: getParam(req.params, 'id') } });
     if (!paciente) { res.status(404).json({ error: 'Paciente não encontrado.' }); return; }
     res.json(paciente);
 });
@@ -74,7 +89,7 @@ pacientesRouter.post('/', authorize('UBS', 'ATENDENTE', 'SEC_ADM'), async (req: 
 pacientesRouter.put('/:id', authorize('UBS', 'ATENDENTE', 'SEC_ADM'), async (req: Request, res: Response) => {
     try {
         const data = pacienteSchema.partial().parse(req.body);
-        const paciente = await prisma.paciente.update({ where: { id: req.params.id as string }, data });
+        const paciente = await prisma.paciente.update({ where: { id: getParam(req.params, 'id') }, data });
 
         await logAction({
             req,
