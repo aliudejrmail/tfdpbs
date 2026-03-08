@@ -81,7 +81,7 @@ export default function Layout() {
             <nav className="sidebar">
                 <div className="sidebar-brand">
                     <h1>TFD Conecta</h1>
-                    <p>Sistema de Gestão do TFD</p>
+                    <p>Sistema de Gestão</p>
                     <p>Tratamento Fora de Domicílio</p>
                 </div>
 
