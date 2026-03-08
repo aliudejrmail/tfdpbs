@@ -72,6 +72,7 @@ model Unidade {
   ativo    Boolean   @default(true)
   usuarios Usuario[]
   processos ProcessoTFD[]
+  medicos   Medico[]
 
   @@map("unidades")
 }
@@ -99,6 +100,22 @@ model Paciente {
   @@map("pacientes")
 }
 
+model Medico {
+  id              String      @id @default(uuid())
+  nome            String
+  crm             String      @unique
+  especialidade   String?
+  ativo           Boolean     @default(true)
+  unidadeId       String
+  unidade         Unidade     @relation(fields: [unidadeId], references: [id])
+  
+  processos       ProcessoTFD[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("medicos")
+}
+
 model ProcessoTFD {
   id               String         @id @default(uuid())
   numero           String         @unique // TFD-2026-00001
@@ -111,7 +128,9 @@ model ProcessoTFD {
   especialidade    String
   cid              String         // CID-10
   descricaoClinica String         @db.Text
-  medicoSolicitante String
+  medicoSolicitante String        // Mantido para compatibilidade e histórico textual
+  medicoId         String?        // Novo campo relacional
+  medico           Medico?        @relation(fields: [medicoId], references: [id])
   crmMedico        String?
   dataConsulta     DateTime?      // Data pretendida para consulta
   

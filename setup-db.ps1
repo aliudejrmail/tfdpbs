@@ -16,7 +16,7 @@ Write-Host "[1/4] Definindo senha do usuario postgres..."
 
 $setPasswordSQL = "ALTER USER postgres WITH PASSWORD '$NEW_PASSWORD';"
 
-$result = & $PSQL -U $PSQL_USER -h 127.0.0.1 -d postgres -c $setPasswordSQL 2>&1
+& $PSQL -U $PSQL_USER -h 127.0.0.1 -d postgres -c $setPasswordSQL 2>&1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "OK - Senha definida: $NEW_PASSWORD"

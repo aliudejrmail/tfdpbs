@@ -6,7 +6,11 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
-export default function PacientesPage() {
+interface PacientesPageProps {
+    onCreatedPaciente?: (paciente: Paciente) => void;
+}
+
+export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps) {
     const [pacientes, setPacientes] = useState<Paciente[]>([]);
     const [total, setTotal] = useState(0);
     const [search, setSearch] = useState('');
@@ -36,11 +40,12 @@ export default function PacientesPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.post('/pacientes', form);
+            const { data } = await api.post('/pacientes', form);
             toast.success('Paciente cadastrado!');
             setShowModal(false);
             setForm({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
             fetchData();
+            if (onCreatedPaciente && data) onCreatedPaciente(data);
         } catch (err: unknown) {
             toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Erro ao cadastrar.');
         } finally {

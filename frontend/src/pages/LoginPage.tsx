@@ -24,7 +24,8 @@ export default function LoginPage() {
             toast.success('Bem-vindo ao sistema TFD!');
             navigate('/dashboard');
         } catch (err: unknown) {
-            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Falha ao realizar login.';
+            const data = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+            const msg = data?.error || data?.message || 'Falha ao realizar login.';
             setError(msg);
         }
     };
@@ -36,8 +37,8 @@ export default function LoginPage() {
                     <div className="icon-wrap">
                         <Activity size={28} color="white" />
                     </div>
-                    <h1>tfdpbs</h1>
-                    <p>Tratamento Fora de Domicílio</p>
+                    <h1>TFD Conecta</h1>
+                    <p>Secretaria Mun. de Saúde de Parauapebas</p>
                 </div>
 
                 <form className="login-form" onSubmit={handleSubmit}>

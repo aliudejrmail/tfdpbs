@@ -7,8 +7,9 @@ export function errorHandler(
     _next: NextFunction
 ): void {
     console.error(err.stack);
+    const isDev = process.env.NODE_ENV !== 'production';
     res.status(500).json({
-        error: 'Erro interno do servidor.',
-        message: process.env.NODE_ENV !== 'production' ? err.message : undefined,
+        error: isDev ? err.message : 'Erro interno do servidor.',
+        message: isDev ? err.message : undefined,
     });
 }

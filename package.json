@@ -8,5 +8,11 @@
   },
   "keywords": [],
   "author": "DIRCA - SEMSA",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/multer": "^2.0.0"
+  },
+  "dependencies": {
+    "multer": "^2.1.0"
+  }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import PacientesPage from '../pages/PacientesPage';
 import api from '../lib/api';
-import type { Paciente, Unidade } from '../types';
+import type { Paciente, Unidade, Medico } from '../types';
 import toast from 'react-hot-toast';
 import { X, Search } from 'lucide-react';
 
@@ -10,9 +11,12 @@ interface Props {
 }
 
 export default function NovoProcessoModal({ onClose, onCreated }: Props) {
+    const [novoPacienteId, setNovoPacienteId] = useState<string | null>(null);
+    const [showPacienteModal, setShowPacienteModal] = useState(false);
     const [step, setStep] = useState(1);
     const [pacientes, setPacientes] = useState<Paciente[]>([]);
     const [unidades, setUnidades] = useState<Unidade[]>([]);
+    const [medicos, setMedicos] = useState<Medico[]>([]);
     const [pacienteSearch, setPacienteSearch] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -24,6 +28,7 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
         descricaoClinica: '',
         medicoSolicitante: '',
         crmMedico: '',
+        medicoId: '',
         cidadeDestino: '',
         ufDestino: '',
         hospitalDestino: '',
@@ -39,19 +44,30 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
     }, []);
 
     useEffect(() => {
-        if (pacienteSearch.length >= 2) {
-            api.get('/pacientes', { params: { search: pacienteSearch, limit: 10 } }).then(r => setPacientes(r.data.pacientes));
+        if (form.unidadeOrigemId) {
+            api.get('/medicos', { params: { unidadeId: form.unidadeOrigemId, ativo: 'true' } }).then(r => setMedicos(r.data));
         } else {
-            setPacientes([]);
+            setMedicos([]);
         }
-    }, [pacienteSearch]);
+    }, [form.unidadeOrigemId]);
+
+    useEffect(() => {
+        if (novoPacienteId) {
+            set('pacienteId', novoPacienteId);
+            setNovoPacienteId(null);
+        }
+    }, [novoPacienteId]);
 
     const set = (field: string, value: unknown) => setForm(f => ({ ...f, [field]: value }));
 
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            await api.post('/processos', { ...form, prioridade: Number(form.prioridade) });
+            const payload = { ...form, prioridade: Number(form.prioridade) };
+            if (form.medicoId === 'OUTRO' || !form.medicoId) {
+                delete (payload as any).medicoId;
+            }
+            await api.post('/processos', payload);
             toast.success('Processo criado com sucesso!');
             onCreated();
         } catch (err: unknown) {
@@ -95,7 +111,7 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                     <input className="form-control" placeholder="Nome, CPF ou Cartão SUS..."
                                         value={pacienteSearch} onChange={e => setPacienteSearch(e.target.value)} />
                                 </div>
-                                {pacientes.length > 0 && (
+                                {pacientes.length > 0 ? (
                                     <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
                                         {pacientes.map(p => (
                                             <div key={p.id} onClick={() => { set('pacienteId', p.id); setPacienteSearch(p.nome); setPacientes([]); }}
@@ -107,6 +123,13 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                             </div>
                                         ))}
                                     </div>
+                                ) : (
+                                    <div style={{ marginTop: 12 }}>
+                                        <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum paciente encontrado.</span>
+                                        <button className="btn btn-accent btn-sm" style={{ marginLeft: 12 }} onClick={() => setShowPacienteModal(true)}>
+                                            Cadastrar novo paciente
+                                        </button>
+                                    </div>
                                 )}
                                 {form.pacienteId && selectedPaciente && (
                                     <div style={{ padding: '8px 12px', background: 'rgba(0,194,168,0.08)', border: '1px solid rgba(0,194,168,0.25)', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>
@@ -114,6 +137,18 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                     </div>
                                 )}
                             </div>
+                            {showPacienteModal && (
+                                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPacienteModal(false)}>
+                                    <div className="modal" style={{ maxWidth: 600 }}>
+                                        <PacientesPage
+                                            onCreatedPaciente={paciente => {
+                                                setNovoPacienteId(paciente.id);
+                                                setShowPacienteModal(false);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="form-group">
                                 <label className="form-label">Unidade de Origem</label>
@@ -142,16 +177,31 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                 <textarea className="form-control" rows={4} placeholder="Descreva o quadro clínico e justificativa..."
                                     value={form.descricaoClinica} onChange={e => set('descricaoClinica', e.target.value)} />
                             </div>
-                            <div className="form-row form-row-2">
-                                <div className="form-group">
-                                    <label className="form-label">Médico Solicitante</label>
-                                    <input className="form-control" value={form.medicoSolicitante} onChange={e => set('medicoSolicitante', e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">CRM</label>
-                                    <input className="form-control" placeholder="Opcional" value={form.crmMedico} onChange={e => set('crmMedico', e.target.value)} />
-                                </div>
+                            <div className="form-group">
+                                <label className="form-label">Médico Solicitante *</label>
+                                <select className="form-control" required value={form.medicoId} onChange={e => {
+                                    const m = medicos.find(med => med.id === e.target.value);
+                                    setForm(f => ({ ...f, medicoId: e.target.value, medicoSolicitante: m?.nome || '', crmMedico: m?.crm || '' }));
+                                }}>
+                                    <option value="">Selecione o médico...</option>
+                                    {medicos.map(m => (
+                                        <option key={m.id} value={m.id}>{m.nome} (CRM: {m.crm})</option>
+                                    ))}
+                                    <option value="OUTRO">Outro (Digitar manualmente)</option>
+                                </select>
                             </div>
+                            {form.medicoId === 'OUTRO' && (
+                                <div className="form-row form-row-2">
+                                    <div className="form-group">
+                                        <label className="form-label">Nome do Médico</label>
+                                        <input className="form-control" value={form.medicoSolicitante} onChange={e => set('medicoSolicitante', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">CRM</label>
+                                        <input className="form-control" value={form.crmMedico} onChange={e => set('crmMedico', e.target.value)} />
+                                    </div>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label className="form-label">Prioridade</label>
                                 <select className="form-control" value={form.prioridade} onChange={e => set('prioridade', Number(e.target.value))}>

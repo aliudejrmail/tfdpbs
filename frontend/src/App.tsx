@@ -15,6 +15,7 @@ import MotoristasPage from './pages/MotoristasPage';
 import ViagensPage from './pages/ViagensPage';
 import FinanceiroPage from './pages/FinanceiroPage';
 import CasaApoioPage from './pages/CasaApoioPage';
+import MedicosPage from './pages/MedicosPage';
 import ValidarDocumentoPage from './pages/ValidarDocumentoPage';
 
 import Layout from './components/Layout';
@@ -55,6 +56,7 @@ function App() {
           <Route path="viagens" element={<ViagensPage />} />
           <Route path="financeiro" element={<FinanceiroPage />} />
           <Route path="casa-apoio" element={<CasaApoioPage />} />
+          <Route path="medicos" element={<MedicosPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

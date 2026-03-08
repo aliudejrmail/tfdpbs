@@ -1,5 +1,8 @@
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import api from '../lib/api';
 import {
     LayoutDashboard,
     FileText,
@@ -14,6 +17,9 @@ import {
     CalendarDays,
     DollarSign,
     Home,
+    Stethoscope,
+    KeyRound,
+    X,
 } from 'lucide-react';
 import type { Perfil } from '../types';
 
@@ -27,6 +33,32 @@ const perfilLabel: Record<Perfil, string> = {
 export default function Layout() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [showPassModal, setShowPassModal] = useState(false);
+    const [passForm, setPassForm] = useState({ current: '', new: '', confirm: '' });
+    const [savingPass, setSavingPass] = useState(false);
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (passForm.new !== passForm.confirm) {
+            toast.error('As senhas não coincidem!');
+            return;
+        }
+        setSavingPass(true);
+        try {
+            await api.patch('/usuarios/me/senha', {
+                senhaAtual: passForm.current,
+                novaSenha: passForm.new
+            });
+            toast.success('Senha alterada com sucesso!');
+            setShowPassModal(false);
+            setPassForm({ current: '', new: '', confirm: '' });
+        } catch (err: any) {
+            const msg = err.response?.data?.error || 'Erro ao alterar senha.';
+            toast.error(typeof msg === 'string' ? msg : 'Erro ao alterar senha.');
+        } finally {
+            setSavingPass(false);
+        }
+    };
 
     const handleLogout = () => {
         logout();
@@ -47,8 +79,9 @@ export default function Layout() {
         <div className="layout">
             <nav className="sidebar">
                 <div className="sidebar-brand">
-                    <h1>tfdpbs</h1>
-                    <p>DIRCA</p>
+                    <h1>TFD Conecta</h1>
+                    <p>Sistema de Gestão do TFD</p>
+                    <p>Tratamento Fora de Domicílio</p>
                 </div>
 
                 <div className="sidebar-nav">
@@ -102,6 +135,11 @@ export default function Layout() {
                         Casa de Apoio
                     </NavLink>
 
+                    <NavLink to="/medicos" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <Stethoscope size={18} />
+                        Médicos
+                    </NavLink>
+
                     {canSeeAll && (
                         <NavLink to="/unidades" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                             <Building2 size={18} />
@@ -126,15 +164,77 @@ export default function Layout() {
                             </div>
                             <div className="user-role">{user?.perfil ? perfilLabel[user.perfil] : ''}</div>
                         </div>
-                        <button className="btn btn-icon btn-outline" onClick={handleLogout} title="Sair" style={{ padding: 6 }}>
-                            <LogOut size={15} />
-                        </button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                                className="btn btn-icon btn-outline"
+                                onClick={() => setShowPassModal(true)}
+                                title="Alterar Senha"
+                                style={{ padding: 6 }}
+                            >
+                                <KeyRound size={15} />
+                            </button>
+                            <button className="btn btn-icon btn-outline" onClick={handleLogout} title="Sair" style={{ padding: 6 }}>
+                                <LogOut size={15} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </nav>
             <main className="content">
                 <Outlet />
             </main>
+
+            {showPassModal && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPassModal(false)}>
+                    <div className="modal" style={{ maxWidth: 400 }}>
+                        <div className="modal-header">
+                            <span className="modal-title">Alterar Minha Senha</span>
+                            <button className="btn btn-icon btn-outline" onClick={() => setShowPassModal(false)}><X size={16} /></button>
+                        </div>
+                        <form onSubmit={handleUpdatePassword}>
+                            <div className="modal-body">
+                                <div className="form-group">
+                                    <label className="form-label">Senha Atual</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        required
+                                        value={passForm.current}
+                                        onChange={e => setPassForm(p => ({ ...p, current: e.target.value }))}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Nova Senha (min. 6 caracteres)</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        required
+                                        minLength={6}
+                                        value={passForm.new}
+                                        onChange={e => setPassForm(p => ({ ...p, new: e.target.value }))}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Confirmar Nova Senha</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        required
+                                        value={passForm.confirm}
+                                        onChange={e => setPassForm(p => ({ ...p, confirm: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-outline" onClick={() => setShowPassModal(false)}>Cancelar</button>
+                                <button type="submit" className="btn btn-accent" disabled={savingPass}>
+                                    {savingPass ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Salvar Nova Senha'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

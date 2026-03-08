@@ -42,6 +42,7 @@ export default function ViagensPage() {
     const [motoristas, setMotoristas] = useState<Motorista[]>([]);
     const [linhas, setLinhas] = useState<Linha[]>([]);
     const [processosDisponiveis, setProcessosDisponiveis] = useState<Processo[]>([]);
+    const [destFilter, setDestFilter] = useState('');
 
     const [tipoViagem, setTipoViagem] = useState<'FROTA' | 'LINHA'>('FROTA');
     const [form, setForm] = useState({
@@ -151,6 +152,7 @@ export default function ViagensPage() {
 
     const openPassageiroModal = async (viagem: Viagem) => {
         setSelectedViagem(viagem);
+        setDestFilter(viagem.linha?.destino || '');
         await loadProcessos();
         setShowPassageiroModal(true);
     };
@@ -426,9 +428,13 @@ export default function ViagensPage() {
                             <button className="btn-icon" onClick={() => setShowPassageiroModal(false)}><X size={20} /></button>
                         </div>
                         <div className="modal-body">
-                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-                                Selecione um processo aprovado/agendado para alocar o paciente nesta viagem.
-                            </p>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label className="form-label" style={{ fontSize: 11 }}>Filtrar por Destino do Processo</label>
+                                    <input className="form-control" style={{ fontSize: 13 }} placeholder="Ex: Belém, Marabá..." value={destFilter} onChange={e => setDestFilter(e.target.value)} />
+                                </div>
+                            </div>
+
                             {processosDisponiveis.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)' }}>Nenhum processo disponível.</p>
                             ) : (
@@ -438,39 +444,51 @@ export default function ViagensPage() {
                                             <tr>
                                                 <th>Processo</th>
                                                 <th>Paciente</th>
-                                                <th>Especialidade</th>
                                                 <th>Destino</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {processosDisponiveis.map(p => {
-                                                const jaAlocado = selectedViagem.passageiros.some(pv => pv.processo.id === p.id);
-                                                return (
-                                                    <tr key={p.id} style={{ opacity: jaAlocado ? 0.5 : 1 }}>
-                                                        <td><span className="badge">{p.numero}</span></td>
-                                                        <td style={{ fontWeight: 500 }}>{p.paciente.nome}</td>
-                                                        <td>{p.especialidade}</td>
-                                                        <td>{p.cidadeDestino}</td>
-                                                        <td>
-                                                            {jaAlocado ? (
-                                                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Alocado</span>
-                                                            ) : (
-                                                                <div style={{ display: 'flex', gap: 4 }}>
-                                                                    <button className="btn btn-accent" style={{ fontSize: 11, padding: '2px 8px' }}
-                                                                        onClick={() => handleAddPassageiro(p, false)}>
-                                                                        <UserPlus size={12} /> Paciente
-                                                                    </button>
-                                                                    <button className="btn btn-outline" style={{ fontSize: 11, padding: '2px 8px' }}
-                                                                        onClick={() => handleAddPassageiro(p, true)}>
-                                                                        + Acomp.
-                                                                    </button>
+                                            {processosDisponiveis
+                                                .filter(p => !destFilter || p.cidadeDestino.toLowerCase().includes(destFilter.toLowerCase()))
+                                                .map(p => {
+                                                    const jaAlocado = selectedViagem.passageiros.some(pv => pv.processo.id === p.id);
+                                                    const destinoDivergente = selectedViagem.linha && p.cidadeDestino.toLowerCase() !== selectedViagem.linha.destino.toLowerCase();
+
+                                                    return (
+                                                        <tr key={p.id} style={{ opacity: jaAlocado ? 0.5 : 1 }}>
+                                                            <td><span className="badge">{p.numero}</span></td>
+                                                            <td style={{ fontWeight: 500 }}>
+                                                                {p.paciente.nome}
+                                                                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.especialidade}</div>
+                                                            </td>
+                                                            <td>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                    {p.cidadeDestino}
+                                                                    {destinoDivergente && (
+                                                                        <AlertCircle size={12} color="var(--warning)" />
+                                                                    )}
                                                                 </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
+                                                            </td>
+                                                            <td>
+                                                                {jaAlocado ? (
+                                                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Alocado</span>
+                                                                ) : (
+                                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                                        <button className="btn btn-accent" style={{ fontSize: 11, padding: '2px 8px' }}
+                                                                            onClick={() => handleAddPassageiro(p, false)}>
+                                                                            <UserPlus size={12} />
+                                                                        </button>
+                                                                        <button className="btn btn-outline" title="Com Acompanhante" style={{ fontSize: 11, padding: '2px 8px' }}
+                                                                            onClick={() => handleAddPassageiro(p, true)}>
+                                                                            + A.
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
                                         </tbody>
                                     </table>
                                 </div>

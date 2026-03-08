@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { authRouter } from './routes/auth.routes';
 import { usuariosRouter } from './routes/usuarios.routes';
 import { processosRouter } from './routes/processos.routes';
@@ -15,6 +16,7 @@ import { viagensRouter } from './routes/viagens.routes';
 import { financeiroRouter } from './routes/financeiro.routes';
 import { casaApoioRouter } from './routes/casa-apoio.routes';
 import { qrcodeRouter } from './routes/qrcode.routes';
+import { medicosRouter } from './routes/medicos.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -22,8 +24,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3333;
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+}));
 app.use(express.json());
+
+// Servir arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -45,12 +53,13 @@ app.use('/api/viagens', viagensRouter);
 app.use('/api/financeiro', financeiroRouter);
 app.use('/api/casas-apoio', casaApoioRouter);
 app.use('/api/qrcode', qrcodeRouter);
+app.use('/api/medicos', medicosRouter);
 
 // Error handler
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`🚀 TFD API running on http://localhost:${PORT}`);
+    console.log(`🚀 TFD API running on port ${PORT}`);
 });
 
 export default app;

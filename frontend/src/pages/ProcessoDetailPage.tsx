@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import type { ProcessoTFD, StatusProcesso } from '../types';
@@ -6,7 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, X, FileText, Printer } from 'lucide-react';
+import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, X, FileText, Printer, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { gerarCapaProcesso, gerarProtocoloEntrega } from '../lib/pdfGenerator';
 
@@ -39,6 +39,9 @@ const transporteLabel: Record<string, string> = {
 };
 
 export default function ProcessoDetailPage() {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -51,14 +54,41 @@ export default function ProcessoDetailPage() {
     const [localAtendimento, setLocalAtendimento] = useState('');
     const [motivoNegativa, setMotivoNegativa] = useState('');
     const [saving, setSaving] = useState(false);
+    const [showEditLogistica, setShowEditLogistica] = useState(false);
+    const [editForm, setEditForm] = useState({ cidadeDestino: '', ufDestino: '', hospitalDestino: '', tipoTransporte: '' as any });
+    const [showCadastrarMedico, setShowCadastrarMedico] = useState(false);
+    const [medicoForm, setMedicoForm] = useState({ nome: '', crm: '', especialidade: '' });
 
     const canTransition = user?.perfil === 'REGULACAO' || user?.perfil === 'SEC_ADM';
+    const canCadastrarMedico = user?.perfil === 'SEC_ADM' || user?.perfil === 'REGULACAO';
 
     useEffect(() => {
         if (!id) return;
         setLoading(true);
         api.get(`/processos/${id}`).then(r => setProcesso(r.data)).finally(() => setLoading(false));
-    }, [id]);
+    }, [id, uploading]);
+
+    const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!fileInputRef.current?.files?.[0]) return;
+        setUploading(true);
+        setUploadError('');
+        const formData = new FormData();
+        formData.append('file', fileInputRef.current.files[0]);
+        formData.append('tipo', 'anexo');
+        try {
+            await api.post(`/processos/${id}/documentos`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success('Arquivo anexado com sucesso!');
+            fileInputRef.current.value = '';
+        } catch (err: any) {
+            setUploadError(err?.response?.data?.error || 'Erro ao enviar arquivo.');
+            toast.error('Erro ao enviar arquivo.');
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleTransicao = async () => {
         if (!novoStatus || !descricao) return;
@@ -78,6 +108,67 @@ export default function ProcessoDetailPage() {
             setNovoStatus(''); setDescricao(''); setDataAgendada(''); setLocalAtendimento(''); setMotivoNegativa('');
         } catch {
             toast.error('Erro ao atualizar status.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleEditLogistica = async () => {
+        setSaving(true);
+        try {
+            await api.put(`/processos/${id}`, editForm);
+            toast.success('Logística atualizada!');
+            const { data } = await api.get(`/processos/${id}`);
+            setProcesso(data);
+            setShowEditLogistica(false);
+        } catch {
+            toast.error('Erro ao editar logística.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const openEditLogistica = () => {
+        if (!processo) return;
+        setEditForm({
+            cidadeDestino: processo.cidadeDestino,
+            ufDestino: processo.ufDestino,
+            hospitalDestino: processo.hospitalDestino || '',
+            tipoTransporte: processo.tipoTransporte,
+        });
+        setShowEditLogistica(true);
+    };
+
+    const openCadastrarMedico = () => {
+        if (!processo) return;
+        setMedicoForm({
+            nome: processo.medicoSolicitante || '',
+            crm: processo.crmMedico || '',
+            especialidade: processo.especialidade || '',
+        });
+        setShowCadastrarMedico(true);
+    };
+
+    const handleCadastrarMedico = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!processo?.unidadeOrigemId) {
+            toast.error('Processo sem unidade de origem.');
+            return;
+        }
+        setSaving(true);
+        try {
+            const { data: medico } = await api.post('/medicos', {
+                ...medicoForm,
+                unidadeId: processo.unidadeOrigemId,
+            });
+            await api.put(`/processos/${id}`, { medicoId: medico.id, medicoSolicitante: medicoForm.nome, crmMedico: medicoForm.crm });
+            toast.success('Médico cadastrado e vinculado ao processo!');
+            const { data } = await api.get(`/processos/${id}`);
+            setProcesso(data);
+            setShowCadastrarMedico(false);
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Erro ao cadastrar médico.';
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
@@ -121,6 +212,35 @@ export default function ProcessoDetailPage() {
             <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
                 {/* Main */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                        {/* Documentos */}
+                                        <div className="card">
+                                            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                Anexos / Documentos
+                                            </div>
+                                            <div>
+                                                {processo?.documentos && processo.documentos.length > 0 ? (
+                                                    <ul style={{ marginBottom: 12 }}>
+                                                        {processo.documentos.map(doc => (
+                                                            <li key={doc.id} style={{ marginBottom: 6 }}>
+                                                                <a href={`http://localhost:3333${doc.url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2b6cb0', textDecoration: 'underline' }}>
+                                                                    {doc.nome}
+                                                                </a>
+                                                                <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>({doc.tipo})</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum documento anexado.</span>
+                                                )}
+                                            </div>
+                                            <form onSubmit={handleFileUpload} style={{ marginTop: 8 }}>
+                                                <input ref={fileInputRef} type="file" accept=".pdf,image/jpeg,image/png" style={{ marginRight: 8 }} disabled={uploading} />
+                                                <button className="btn btn-accent btn-sm" type="submit" disabled={uploading}>
+                                                    {uploading ? 'Enviando...' : 'Anexar Arquivo'}
+                                                </button>
+                                            </form>
+                                            {uploadError && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 4 }}>{uploadError}</div>}
+                                        </div>
                     {/* Paciente */}
                     <div className="card">
                         <div className="card-title">Dados do Paciente</div>
@@ -136,8 +256,21 @@ export default function ProcessoDetailPage() {
                         <div className="detail-grid" style={{ marginBottom: 12 }}>
                             <div className="detail-item"><label>Especialidade</label><span>{processo.especialidade}</span></div>
                             <div className="detail-item"><label>CID-10</label><span>{processo.cid}</span></div>
-                            <div className="detail-item"><label>Médico Solicitante</label><span>{processo.medicoSolicitante}</span></div>
-                            {processo.crmMedico && <div className="detail-item"><label>CRM</label><span>{processo.crmMedico}</span></div>}
+                            <div className="detail-item">
+                                <label>Médico Solicitante</label>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {processo.medico?.nome || processo.medicoSolicitante}
+                                    {!processo.medico && processo.medicoSolicitante && canCadastrarMedico && (
+                                        <button type="button" className="btn btn-sm btn-outline" onClick={openCadastrarMedico} title="Cadastrar médico no sistema">
+                                            <UserPlus size={12} /> Cadastrar
+                                        </button>
+                                    )}
+                                </span>
+                            </div>
+                            <div className="detail-item">
+                                <label>CRM</label>
+                                <span>{processo.medico?.crm || processo.crmMedico || '-'}</span>
+                            </div>
                             <div className="detail-item"><label>Unidade Origem</label><span>{processo.unidadeOrigem?.nome}</span></div>
                             <div className="detail-item">
                                 <label>Prioridade</label>
@@ -156,9 +289,15 @@ export default function ProcessoDetailPage() {
                         </div>
                     </div>
 
-                    {/* Logística */}
                     <div className="card">
-                        <div className="card-title">Logística</div>
+                        <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            Logística
+                            {canTransition && (
+                                <button className="btn btn-icon btn-outline" style={{ padding: 4 }} onClick={openEditLogistica} title="Editar Destino/Transporte">
+                                    <FileText size={14} />
+                                </button>
+                            )}
+                        </div>
                         <div className="detail-grid">
                             <div className="detail-item"><label>Destino</label><span>{processo.cidadeDestino} - {processo.ufDestino}</span></div>
                             {processo.hospitalDestino && <div className="detail-item"><label>Hospital</label><span>{processo.hospitalDestino}</span></div>}
@@ -289,6 +428,85 @@ export default function ProcessoDetailPage() {
                                 {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Confirmar'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Logistica Modal */}
+            {showEditLogistica && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowEditLogistica(false)}>
+                    <div className="modal" style={{ maxWidth: 480 }}>
+                        <div className="modal-header">
+                            <span className="modal-title">Editar Destino e Transporte</span>
+                            <button className="btn btn-icon btn-outline" onClick={() => setShowEditLogistica(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label className="form-label">Cidade de Destino *</label>
+                                <input className="form-control" value={editForm.cidadeDestino} onChange={e => setEditForm(f => ({ ...f, cidadeDestino: e.target.value }))} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">UF *</label>
+                                <input className="form-control" maxLength={2} value={editForm.ufDestino} onChange={e => setEditForm(f => ({ ...f, ufDestino: e.target.value.toUpperCase() }))} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Hospital/Local de Destino</label>
+                                <input className="form-control" value={editForm.hospitalDestino} onChange={e => setEditForm(f => ({ ...f, hospitalDestino: e.target.value }))} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Tipo de Transporte *</label>
+                                <select className="form-control" value={editForm.tipoTransporte} onChange={e => setEditForm(f => ({ ...f, tipoTransporte: e.target.value }))}>
+                                    <option value="ONIBUS">Ônibus</option>
+                                    <option value="VAN">Van</option>
+                                    <option value="AMBULANCIA">Ambulância</option>
+                                    <option value="AEREO">Aéreo</option>
+                                    <option value="PROPRIO">Transporte Próprio</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-outline" onClick={() => setShowEditLogistica(false)}>Cancelar</button>
+                            <button className="btn btn-accent" onClick={handleEditLogistica} disabled={saving}>
+                                {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Salvar Alterações'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cadastrar Médico Modal */}
+            {showCadastrarMedico && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowCadastrarMedico(false)}>
+                    <div className="modal" style={{ maxWidth: 420 }}>
+                        <div className="modal-header">
+                            <span className="modal-title">Cadastrar Médico no Sistema</span>
+                            <button className="btn btn-icon btn-outline" onClick={() => setShowCadastrarMedico(false)}><X size={16} /></button>
+                        </div>
+                        <form onSubmit={handleCadastrarMedico}>
+                            <div className="modal-body">
+                                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                                    O médico será cadastrado na unidade <strong>{processo?.unidadeOrigem?.nome}</strong> e vinculado a este processo.
+                                </p>
+                                <div className="form-group">
+                                    <label className="form-label">Nome *</label>
+                                    <input className="form-control" required minLength={3} value={medicoForm.nome} onChange={e => setMedicoForm(f => ({ ...f, nome: e.target.value }))} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">CRM *</label>
+                                    <input className="form-control" required minLength={4} value={medicoForm.crm} onChange={e => setMedicoForm(f => ({ ...f, crm: e.target.value }))} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Especialidade</label>
+                                    <input className="form-control" value={medicoForm.especialidade} onChange={e => setMedicoForm(f => ({ ...f, especialidade: e.target.value }))} placeholder="Opcional" />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-outline" onClick={() => setShowCadastrarMedico(false)}>Cancelar</button>
+                                <button type="submit" className="btn btn-accent" disabled={saving}>
+                                    {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Cadastrar e Vincular'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

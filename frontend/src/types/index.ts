@@ -20,6 +20,16 @@ export interface Unidade {
     ativo: boolean;
 }
 
+export interface Medico {
+    id: string;
+    nome: string;
+    crm: string;
+    especialidade?: string;
+    ativo: boolean;
+    unidadeId: string;
+    unidade: { nome: string };
+}
+
 export interface Usuario {
     id: string;
     nome: string;
@@ -57,6 +67,8 @@ export interface ProcessoTFD {
     cid: string;
     descricaoClinica: string;
     medicoSolicitante: string;
+    medicoId?: string;
+    medico?: Medico;
     crmMedico?: string;
     dataConsulta?: string;
     cidadeDestino: string;
@@ -78,6 +90,7 @@ export interface ProcessoTFD {
     updatedAt: string;
     historico?: HistoricoProcesso[];
     passagens?: Passagem[];
+    documentos?: Documento[];
 }
 
 export interface HistoricoProcesso {
@@ -97,6 +110,15 @@ export interface Passagem {
     empresa?: string;
     valor?: number;
     observacoes?: string;
+}
+
+export interface Documento {
+    id: string;
+    processoId: string;
+    nome: string;
+    tipo: string;
+    url: string;
+    createdAt: string;
 }
 
 export interface DashboardStats {

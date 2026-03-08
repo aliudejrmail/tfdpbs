@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
+import { upload } from '../lib/upload';
 import { z } from 'zod';
 import { prisma, selectUsuarioPublico } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
@@ -8,6 +10,32 @@ import { logAction } from '../lib/logger';
 export const processosRouter = Router();
 processosRouter.use(authenticate);
 
+// Upload de documento
+import type { Request as ExpressRequest } from 'express';
+interface MulterRequest extends ExpressRequest {
+    file?: Express.Multer.File;
+}
+
+processosRouter.post('/:id/documentos', authorize('UBS', 'ATENDENTE', 'SEC_ADM', 'REGULACAO'), upload.single('file'), async (req: MulterRequest, res: Response) => {
+    const processoId = req.params.id as string;
+    const { tipo } = req.body;
+    if (!req.file) return res.status(400).json({ error: 'Arquivo não enviado.' });
+    const processo = await prisma.processoTFD.findUnique({ where: { id: processoId } });
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado.' });
+    const url = `/uploads/${req.file.filename}`;
+    const documento = await prisma.documento.create({
+        data: {
+            processoId,
+            nome: req.file.originalname,
+            tipo: tipo || 'outro',
+            url,
+        }
+    });
+    // Usar valores válidos para acao e entidade
+    await logAction({ req, acao: 'CREATE', entidade: 'PROCESSO', entidadeId: documento.id, detalhes: `Documento anexado ao processo ${processo.numero}` });
+    res.status(201).json(documento);
+});
+
 const processoSchema = z.object({
     pacienteId: z.string().uuid(),
     unidadeOrigemId: z.string().uuid(),
@@ -16,6 +44,7 @@ const processoSchema = z.object({
     descricaoClinica: z.string().min(10),
     medicoSolicitante: z.string().min(3),
     crmMedico: z.string().optional(),
+    medicoId: z.string().uuid().optional(),
     dataConsulta: z.string().optional().transform(v => v ? new Date(v) : undefined),
     cidadeDestino: z.string().min(2),
     ufDestino: z.string().length(2),
@@ -114,6 +143,7 @@ processosRouter.get('/:id', async (req: Request, res: Response) => {
             unidadeOrigem: true,
             abertoPor: { select: selectUsuarioPublico },
             reguladoPor: { select: selectUsuarioPublico },
+            medico: true,
             historico: {
                 orderBy: { createdAt: 'desc' },
                 include: { usuario: { select: selectUsuarioPublico } },
@@ -167,10 +197,27 @@ processosRouter.post('/', authorize('UBS', 'ATENDENTE', 'SEC_ADM'), async (req: 
 processosRouter.put('/:id', authorize('REGULACAO', 'SEC_ADM', 'ATENDENTE'), async (req: Request, res: Response) => {
     try {
         const data = processoSchema.partial().parse(req.body);
+        const processoAntigo = await prisma.processoTFD.findUnique({ where: { id: req.params.id as string } });
+        if (!processoAntigo) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }
+
         const processo = await prisma.processoTFD.update({
             where: { id: req.params.id as string },
             data,
         });
+
+        // Registrar no histórico se o destino mudou
+        if ((data.cidadeDestino && data.cidadeDestino !== processoAntigo.cidadeDestino) ||
+            (data.ufDestino && data.ufDestino !== processoAntigo.ufDestino)) {
+            await prisma.historicoProcesso.create({
+                data: {
+                    processoId: processo.id,
+                    usuarioId: req.user!.userId,
+                    statusAnterior: processo.status,
+                    statusNovo: processo.status,
+                    descricao: `Cidade de destino alterada de ${processoAntigo.cidadeDestino}-${processoAntigo.ufDestino} para ${processo.cidadeDestino}-${processo.ufDestino}.`,
+                },
+            });
+        }
 
         await logAction({
             req,
