@@ -5,6 +5,8 @@ import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 import App from './App.tsx'
 
+console.log('Iniciando aplicação TFD...');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>

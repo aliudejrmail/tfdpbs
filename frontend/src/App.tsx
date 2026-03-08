@@ -57,7 +57,9 @@ function App() {
           <Route path="financeiro" element={<FinanceiroPage />} />
           <Route path="casa-apoio" element={<CasaApoioPage />} />
           <Route path="medicos" element={<MedicosPage />} />
+          <Route path="*" element={<div>Página não encontrada ou Rota Inválida no App</div>} />
         </Route>
+        <Route path="*" element={<div>Página não encontrada no Root</div>} />
       </Routes>
     </BrowserRouter>
   );
