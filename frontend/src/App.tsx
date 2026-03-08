@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -40,7 +40,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/consulta" element={<ConsultaPublicaPage />} />
@@ -70,7 +70,7 @@ function App() {
         </Route>
         <Route path="*" element={<div>Página não encontrada no Root</div>} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 

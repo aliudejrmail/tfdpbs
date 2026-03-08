@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log('[Auth] Inicializando AuthProvider...');
         const checkAuth = async () => {
             if (token && !user) {
                 try {
