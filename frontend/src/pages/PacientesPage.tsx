@@ -17,7 +17,7 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [form, setForm] = useState({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
+    const [form, setForm] = useState({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', cep: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
     const [saving, setSaving] = useState(false);
     const limit = 20;
 
@@ -36,6 +36,27 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const handleCepBlur = async (cep: string) => {
+        const cepLimpo = cep.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) return;
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+            const data = await response.json();
+            if (!data.erro) {
+                setForm(f => ({
+                    ...f,
+                    endereco: data.logradouro || '',
+                    bairro: data.bairro || '',
+                    cidade: data.localidade || '',
+                    uf: data.uf || 'AM'
+                }));
+            }
+        } catch {
+            // Erro ao buscar CEP, usuário preenche manualmente
+        }
+    };
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -43,7 +64,7 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
             const { data } = await api.post('/pacientes', form);
             toast.success('Paciente cadastrado!');
             setShowModal(false);
-            setForm({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
+            setForm({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', cep: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
             fetchData();
             if (onCreatedPaciente && data) onCreatedPaciente(data);
         } catch (err: unknown) {
@@ -169,9 +190,19 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
                                         <input className="form-control" value={form.telefone} onChange={e => set('telefone', e.target.value)} />
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Endereço *</label>
-                                    <input className="form-control" required value={form.endereco} onChange={e => set('endereco', e.target.value)} />
+                                <div className="form-row form-row-3">
+                                    <div className="form-group">
+                                        <label className="form-label">CEP</label>
+                                        <input className="form-control" maxLength={9} placeholder="00000-000" value={form.cep} onChange={e => {
+                                            const v = e.target.value;
+                                            set('cep', v);
+                                            if (v.replace(/\D/g, '').length === 8) handleCepBlur(v);
+                                        }} onBlur={e => handleCepBlur(e.target.value)} />
+                                    </div>
+                                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                        <label className="form-label">Endereço *</label>
+                                        <input className="form-control" required value={form.endereco} onChange={e => set('endereco', e.target.value)} />
+                                    </div>
                                 </div>
                                 <div className="form-row form-row-3">
                                     <div className="form-group">
