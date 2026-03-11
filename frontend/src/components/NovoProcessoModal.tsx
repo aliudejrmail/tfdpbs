@@ -52,6 +52,24 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
     }, [form.unidadeOrigemId]);
 
     useEffect(() => {
+        if (!pacienteSearch || pacienteSearch.length < 3) {
+            setPacientes([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const { data } = await api.get('/pacientes', { params: { search: pacienteSearch, limit: 5 } });
+                setPacientes(data.pacientes);
+            } catch (err) {
+                console.error('Erro ao buscar pacientes:', err);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [pacienteSearch]);
+
+    useEffect(() => {
         if (novoPacienteId) {
             set('pacienteId', novoPacienteId);
             setNovoPacienteId(null);

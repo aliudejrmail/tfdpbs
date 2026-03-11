@@ -162,7 +162,7 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
                                 <div className="form-row form-row-2">
                                     <div className="form-group">
                                         <label className="form-label">Cartão SUS</label>
-                                        <input className="form-control" value={form.cartaoSus} onChange={e => set('cartaoSus', e.target.value)} />
+                                        <input className="form-control" maxLength={15} value={form.cartaoSus} onChange={e => set('cartaoSus', e.target.value)} />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Telefone</label>
