@@ -6,7 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, X, FileText, Printer, UserPlus, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, User, X, FileText, Printer, UserPlus, Plus, Trash2, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { gerarCapaProcesso, gerarProtocoloEntrega } from '../lib/pdfGenerator';
 
@@ -440,44 +440,79 @@ export default function ProcessoDetailPage() {
                         )}
                     </div>
 
-                    <div className="card" style={{ marginTop: 16 }}>
-                        <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            Passagens
-                            <button className="btn btn-accent btn-sm" onClick={() => handleOpenPassagemModal()}>
-                                <Plus size={14} />
-                                Nova Passagem
-                            </button>
-                        </div>
-                        {passagens.length > 0 ? (
-                            <div>
-                                {passagens.map((p, index) => (
-                                    <div key={p.id} style={{ padding: '10px 0', borderBottom: index === passagens.length - 1 ? 'none' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span className={`badge ${p.tipo === 'IDA' ? 'APROVADO' : 'AGENDADO'}`}>{p.tipo}</span>
-                                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                                    {format(new Date(p.dataViagem), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                                                </span>
-                                            </div>
-                                            {p.linha?.nome && <div style={{ fontSize: 12, marginTop: 4, fontWeight: 500 }}>{p.linha.nome}</div>}
-                                            {(p.empresa || p.numeroPassagem) && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.empresa} {p.numeroPassagem && `— ${p.numeroPassagem}`}</div>}
-                                            {p.valor && <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 2 }}>R$ {p.valor.toFixed(2)}</div>}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleOpenPassagemModal(p)} title="Editar">
-                                                <Edit2 size={12} />
-                                            </button>
-                                            <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleDeletePassagem(p.id)} title="Excluir">
-                                                <Trash2 size={12} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                    {/* Passagens (Aéreo/Ônibus) */}
+                    {(processo.tipoTransporte === 'AEREO' || processo.tipoTransporte === 'ONIBUS' || passagens.length > 0) && (
+                        <div className="card" style={{ marginTop: 16 }}>
+                            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                Passagens
+                                <button className="btn btn-accent btn-sm" onClick={() => handleOpenPassagemModal()}>
+                                    <Plus size={14} />
+                                    Nova Passagem
+                                </button>
                             </div>
-                        ) : (
-                            <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma passagem cadastrada.</p>
-                        )}
-                    </div>
+                            {passagens.length > 0 ? (
+                                <div>
+                                    {passagens.map((p, index) => (
+                                        <div key={p.id} style={{ padding: '10px 0', borderBottom: index === passagens.length - 1 ? 'none' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span className={`badge ${p.tipo === 'IDA' ? 'APROVADO' : 'AGENDADO'}`}>{p.tipo}</span>
+                                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                                        {format(new Date(p.dataViagem), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                                    </span>
+                                                </div>
+                                                {p.linha?.nome && <div style={{ fontSize: 12, marginTop: 4, fontWeight: 500 }}>{p.linha.nome}</div>}
+                                                {(p.empresa || p.numeroPassagem) && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.empresa} {p.numeroPassagem && `— ${p.numeroPassagem}`}</div>}
+                                                {p.valor && <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 2 }}>R$ {p.valor.toFixed(2)}</div>}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleOpenPassagemModal(p)} title="Editar">
+                                                    <Edit2 size={12} />
+                                                </button>
+                                                <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleDeletePassagem(p.id)} title="Excluir">
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma passagem cadastrada.</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Escala de Viagens (Frota Própria) */}
+                    {(processo.tipoTransporte === 'AMBULANCIA' || processo.tipoTransporte === 'VAN' || (processo.viagens && processo.viagens.length > 0)) && (
+                        <div className="card" style={{ marginTop: 16 }}>
+                            <div className="card-title">Escala de Viagem (Frota)</div>
+                            {processo.viagens && processo.viagens.length > 0 ? (
+                                <div>
+                                    {processo.viagens.map((pv, index) => (
+                                        <div key={pv.id} style={{ padding: '10px 0', borderBottom: index === (processo.viagens?.length || 0) - 1 ? 'none' : '1px solid var(--border)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                                <span style={{ fontWeight: 600 }}>{format(new Date(pv.viagem.dataPartida), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                                <span className="badge" style={{ fontSize: 10 }}>{pv.viagem.status}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                                                <Car size={12} />
+                                                <span>{pv.viagem.veiculo?.modelo} ({pv.viagem.veiculo?.placa})</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                                                <User size={12} />
+                                                <span>{pv.viagem.motorista?.nome}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>Nenhuma viagem escalada para este processo.</p>
+                                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Utilize o menu <strong>Viagens</strong> para alocar o paciente a um veículo da frota.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 

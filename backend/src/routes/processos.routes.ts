@@ -175,6 +175,17 @@ processosRouter.get('/:id', async (req: Request, res: Response) => {
             },
             documentos: true,
             passagens: true,
+            viagens: {
+                include: {
+                    viagem: {
+                        include: {
+                            veiculo: true,
+                            motorista: true,
+                            linha: true,
+                        }
+                    }
+                }
+            }
         },
     });
     if (!processo) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }

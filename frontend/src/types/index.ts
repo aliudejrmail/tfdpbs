@@ -103,6 +103,7 @@ export interface ProcessoTFD {
     historico?: HistoricoProcesso[];
     passagens?: Passagem[];
     documentos?: Documento[];
+    viagens?: PassageiroViagem[];
 }
 
 export interface HistoricoProcesso {
@@ -145,6 +146,22 @@ export interface Linha {
     destino: string;
     horarios?: string;
     ativo: boolean;
+}
+
+export interface Viagem {
+    id: string;
+    dataPartida: string;
+    dataRetorno?: string;
+    veiculo?: { id: string; placa: string; modelo: string };
+    motorista?: { id: string; nome: string };
+    linha?: { id: string; nome: string };
+    status: string;
+}
+
+export interface PassageiroViagem {
+    id: string;
+    viagem: Viagem;
+    acompanhante: boolean;
 }
 
 export interface DashboardStats {
