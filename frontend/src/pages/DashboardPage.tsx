@@ -6,7 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import StatusBadge from '../components/StatusBadge';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Activity, Package, TrendingUp, Award, Building2, Stethoscope, Calendar, Clock } from 'lucide-react';
+import { Activity, Package, TrendingUp, Building2, Stethoscope, Calendar, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
