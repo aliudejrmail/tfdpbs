@@ -145,14 +145,13 @@ export default function ProcessoDetailPage() {
     };
 
     const openEditLogistica = () => {
-        if (!processo) return;
         setEditForm({
-            cidadeDestino: processo.cidadeDestino,
-            ufDestino: processo.ufDestino,
-            hospitalDestino: processo.hospitalDestino || '',
-            tipoTransporte: processo.tipoTransporte,
-            transporteTerceirizado: processo.transporteTerceirizado || false,
-            empresaTransporteId: processo.empresaTransporteId || '',
+            cidadeDestino: processo?.cidadeDestino || '',
+            ufDestino: processo?.ufDestino || '',
+            hospitalDestino: processo?.hospitalDestino || '',
+            tipoTransporte: processo?.tipoTransporte || 'ONIBUS',
+            transporteTerceirizado: processo?.transporteTerceirizado || false,
+            empresaTransporteId: processo?.empresaTransporteId || '',
         });
         setShowEditLogistica(true);
     };
@@ -483,7 +482,7 @@ export default function ProcessoDetailPage() {
                     )}
 
                     {/* Escala de Viagens (Frota Própria) ou Transporte Terceirizado */}
-                    {(processo.tipoTransporte === 'AMBULANCIA' || processo.tipoTransporte === 'VAN' || (processo.viagens && processo.viagens.length > 0)) && (
+                    {(processo.transporteTerceirizado || processo.tipoTransporte === 'AMBULANCIA' || processo.tipoTransporte === 'VAN' || (processo.viagens && processo.viagens.length > 0)) && (
                         <div className="card" style={{ marginTop: 16 }}>
                             <div className="card-title">
                                 {processo.transporteTerceirizado ? 'Transporte Terceirizado' : 'Escala de Viagem (Frota)'}
