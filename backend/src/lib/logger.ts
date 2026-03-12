@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { prisma } from './prisma';
 
 type Acao = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';
-type Entidade = 'PACIENTE' | 'PROCESSO' | 'USUARIO' | 'UNIDADE' | 'MEDICO' | 'LINHA' | 'VEICULO' | 'MOTORISTA' | 'VIAGEM' | 'DIARIA' | 'AJUDA_CUSTO' | 'VALE_HOSPEDAGEM' | 'CASA_APOIO' | 'DOCUMENTO' | 'PASSAGEM' | 'DEMANDA_PASSAGEM_AEREA';
+type Entidade = 'PACIENTE' | 'PROCESSO' | 'USUARIO' | 'UNIDADE' | 'MEDICO' | 'LINHA' | 'VEICULO' | 'MOTORISTA' | 'VIAGEM' | 'DIARIA' | 'AJUDA_CUSTO' | 'VALE_HOSPEDAGEM' | 'CASA_APOIO' | 'DOCUMENTO' | 'PASSAGEM' | 'DEMANDA_PASSAGEM_AEREA' | 'EMPRESA_TRANSPORTE';
 
 interface LogData {
     req?: Request;

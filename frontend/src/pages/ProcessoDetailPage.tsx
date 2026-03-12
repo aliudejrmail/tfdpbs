@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import type { ProcessoTFD, StatusProcesso } from '../types';
+import type { ProcessoTFD, StatusProcesso, Passagem, Linha } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, X, FileText, Printer, UserPlus } from 'lucide-react';
+import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, X, FileText, Printer, UserPlus, Plus, Trash2, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { gerarCapaProcesso, gerarProtocoloEntrega } from '../lib/pdfGenerator';
 
@@ -58,6 +58,11 @@ export default function ProcessoDetailPage() {
     const [editForm, setEditForm] = useState({ cidadeDestino: '', ufDestino: '', hospitalDestino: '', tipoTransporte: '' as any });
     const [showCadastrarMedico, setShowCadastrarMedico] = useState(false);
     const [medicoForm, setMedicoForm] = useState({ nome: '', crm: '', especialidade: '' });
+    const [passagens, setPassagens] = useState<Passagem[]>([]);
+    const [showPassagemModal, setShowPassagemModal] = useState(false);
+    const [editingPassagem, setEditingPassagem] = useState<Passagem | null>(null);
+    const [passagemForm, setPassagemForm] = useState({ tipo: 'IDA' as 'IDA' | 'VOLTA', dataViagem: '', numeroPassagem: '', empresa: '', valor: '', observacoes: '', linhaId: '' });
+    const [linhas, setLinhas] = useState<Linha[]>([]);
 
     const canTransition = user?.perfil === 'REGULACAO' || user?.perfil === 'SEC_ADM';
     const canCadastrarMedico = user?.perfil === 'SEC_ADM' || user?.perfil === 'REGULACAO';
@@ -65,8 +70,16 @@ export default function ProcessoDetailPage() {
     useEffect(() => {
         if (!id) return;
         setLoading(true);
-        api.get(`/processos/${id}`).then(r => setProcesso(r.data)).finally(() => setLoading(false));
-    }, [id, uploading]);
+        Promise.all([
+            api.get(`/processos/${id}`),
+            api.get('/passagens', { params: { processoId: id } }),
+            api.get('/linhas-onibus', { params: { ativo: 'true' } })
+        ]).then(([processoRes, passagensRes, linhasRes]) => {
+            setProcesso(processoRes.data);
+            setPassagens(passagensRes.data);
+            setLinhas(linhasRes.data);
+        }).finally(() => setLoading(false));
+    }, [id, showPassagemModal]);
 
     const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -171,6 +184,61 @@ export default function ProcessoDetailPage() {
             toast.error(msg);
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Passagens handlers
+    const handleOpenPassagemModal = (passagem?: Passagem) => {
+        if (passagem) {
+            setEditingPassagem(passagem);
+            setPassagemForm({
+                tipo: passagem.tipo,
+                dataViagem: format(new Date(passagem.dataViagem), 'yyyy-MM-dd HH:mm'),
+                numeroPassagem: passagem.numeroPassagem || '',
+                empresa: passagem.empresa || '',
+                valor: passagem.valor?.toString() || '',
+                observacoes: passagem.observacoes || '',
+                linhaId: passagem.linhaId || ''
+            });
+        } else {
+            setEditingPassagem(null);
+            setPassagemForm({ tipo: 'IDA', dataViagem: '', numeroPassagem: '', empresa: '', valor: '', observacoes: '', linhaId: '' });
+        }
+        setShowPassagemModal(true);
+    };
+
+    const handleSavePassagem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const payload: any = {
+                ...passagemForm,
+                processoId: id,
+                valor: passagemForm.valor ? parseFloat(passagemForm.valor) : undefined,
+            };
+            if (editingPassagem) {
+                await api.put(`/passagens/${editingPassagem.id}`, payload);
+                toast.success('Passagem atualizada!');
+            } else {
+                await api.post('/passagens', payload);
+                toast.success('Passagem cadastrada!');
+            }
+            setShowPassagemModal(false);
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Erro ao salvar passagem.';
+            toast.error(msg);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeletePassagem = async (passagemId: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta passagem?')) return;
+        try {
+            await api.delete(`/passagens/${passagemId}`);
+            toast.success('Passagem excluída!');
+        } catch {
+            toast.error('Erro ao excluir passagem.');
         }
     };
 
@@ -361,22 +429,44 @@ export default function ProcessoDetailPage() {
                         )}
                     </div>
 
-                    {processo.passagens && processo.passagens.length > 0 && (
-                        <div className="card" style={{ marginTop: 16 }}>
-                            <div className="card-title">Passagens</div>
-                            {processo.passagens.map((p, index) => (
-                                <div key={p.id} style={{ padding: '10px 0', borderBottom: index === (processo.passagens?.length || 0) - 1 ? 'none' : '1px solid var(--border)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span className={`badge ${p.tipo === 'IDA' ? 'APROVADO' : 'AGENDADO'}`}>{p.tipo}</span>
-                                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                            {format(new Date(p.dataViagem), 'dd/MM/yyyy', { locale: ptBR })}
-                                        </span>
-                                    </div>
-                                    {p.empresa && <div style={{ fontSize: 12, marginTop: 4 }}>{p.empresa} {p.numeroPassagem && `— ${p.numeroPassagem}`}</div>}
-                                </div>
-                            ))}
+                    <div className="card" style={{ marginTop: 16 }}>
+                        <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            Passagens
+                            <button className="btn btn-accent btn-sm" onClick={() => handleOpenPassagemModal()}>
+                                <Plus size={14} />
+                                Nova Passagem
+                            </button>
                         </div>
-                    )}
+                        {passagens.length > 0 ? (
+                            <div>
+                                {passagens.map((p, index) => (
+                                    <div key={p.id} style={{ padding: '10px 0', borderBottom: index === passagens.length - 1 ? 'none' : '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span className={`badge ${p.tipo === 'IDA' ? 'APROVADO' : 'AGENDADO'}`}>{p.tipo}</span>
+                                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                                    {format(new Date(p.dataViagem), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                                </span>
+                                            </div>
+                                            {p.linha?.nome && <div style={{ fontSize: 12, marginTop: 4, fontWeight: 500 }}>{p.linha.nome}</div>}
+                                            {(p.empresa || p.numeroPassagem) && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.empresa} {p.numeroPassagem && `— ${p.numeroPassagem}`}</div>}
+                                            {p.valor && <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 2 }}>R$ {p.valor.toFixed(2)}</div>}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                            <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleOpenPassagemModal(p)} title="Editar">
+                                                <Edit2 size={12} />
+                                            </button>
+                                            <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleDeletePassagem(p.id)} title="Excluir">
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhuma passagem cadastrada.</p>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -504,6 +594,68 @@ export default function ProcessoDetailPage() {
                                 <button type="button" className="btn btn-outline" onClick={() => setShowCadastrarMedico(false)}>Cancelar</button>
                                 <button type="submit" className="btn btn-accent" disabled={saving}>
                                     {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Cadastrar e Vincular'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Nova/Editar Passagem Modal */}
+            {showPassagemModal && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPassagemModal(false)}>
+                    <div className="modal" style={{ maxWidth: 520 }}>
+                        <div className="modal-header">
+                            <span className="modal-title">{editingPassagem ? 'Editar Passagem' : 'Nova Passagem'}</span>
+                            <button className="btn btn-icon btn-outline" onClick={() => setShowPassagemModal(false)}><X size={16} /></button>
+                        </div>
+                        <form onSubmit={handleSavePassagem}>
+                            <div className="modal-body">
+                                <div className="form-row form-row-2">
+                                    <div className="form-group">
+                                        <label className="form-label">Tipo *</label>
+                                        <select className="form-control" value={passagemForm.tipo} onChange={e => setPassagemForm(f => ({ ...f, tipo: e.target.value as 'IDA' | 'VOLTA' }))}>
+                                            <option value="IDA">Ida</option>
+                                            <option value="VOLTA">Volta</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Linha (Ônibus)</label>
+                                        <select className="form-control" value={passagemForm.linhaId} onChange={e => setPassagemForm(f => ({ ...f, linhaId: e.target.value }))}>
+                                            <option value="">Selecione...</option>
+                                            {linhas.map(l => (
+                                                <option key={l.id} value={l.id}>{l.nome}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Data e Hora da Viagem *</label>
+                                    <input type="datetime-local" className="form-control" required value={passagemForm.dataViagem} onChange={e => setPassagemForm(f => ({ ...f, dataViagem: e.target.value }))} />
+                                </div>
+                                <div className="form-row form-row-2">
+                                    <div className="form-group">
+                                        <label className="form-label">Empresa</label>
+                                        <input className="form-control" value={passagemForm.empresa} onChange={e => setPassagemForm(f => ({ ...f, empresa: e.target.value }))} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Número da Passagem</label>
+                                        <input className="form-control" value={passagemForm.numeroPassagem} onChange={e => setPassagemForm(f => ({ ...f, numeroPassagem: e.target.value }))} />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Valor (R$)</label>
+                                    <input type="number" step="0.01" className="form-control" value={passagemForm.valor} onChange={e => setPassagemForm(f => ({ ...f, valor: e.target.value }))} placeholder="0.00" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Observações</label>
+                                    <textarea className="form-control" rows={3} value={passagemForm.observacoes} onChange={e => setPassagemForm(f => ({ ...f, observacoes: e.target.value }))} />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-outline" onClick={() => setShowPassagemModal(false)}>Cancelar</button>
+                                <button type="submit" className="btn btn-accent" disabled={saving}>
+                                    {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : (editingPassagem ? 'Atualizar' : 'Cadastrar')}
                                 </button>
                             </div>
                         </form>

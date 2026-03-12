@@ -96,6 +96,7 @@ processosRouter.get('/', async (req: Request, res: Response) => {
     const status = getQueryParam(req.query, 'status');
     const prioridade = getQueryParam(req.query, 'prioridade');
     const unidadeId = getQueryParam(req.query, 'unidadeId');
+    const terceirizados = getQueryParam(req.query, 'terceirizados');
     const page = getQueryParam(req.query, 'page') || '1';
     const limit = getQueryParam(req.query, 'limit') || '20';
     const perfil = req.user!.perfil;
@@ -107,6 +108,10 @@ processosRouter.get('/', async (req: Request, res: Response) => {
     if (perfil === 'UBS') {
         const usuario = await prisma.usuario.findUnique({ where: { id: userId } });
         if (usuario?.unidadeId) where.unidadeOrigemId = usuario.unidadeId;
+    }
+
+    if (terceirizados === 'true') {
+        where.transporteTerceirizado = true;
     }
 
     if (status) {
@@ -147,6 +152,7 @@ processosRouter.get('/', async (req: Request, res: Response) => {
                 unidadeOrigem: { select: { id: true, nome: true, cnes: true } },
                 abertoPor: { select: selectUsuarioPublico },
                 reguladoPor: { select: selectUsuarioPublico },
+                empresaTransporte: terceirizados === 'true' ? true : undefined,
             },
         }),
     ]);

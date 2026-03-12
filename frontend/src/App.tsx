@@ -18,6 +18,8 @@ import CasaApoioPage from './pages/CasaApoioPage';
 import MedicosPage from './pages/MedicosPage';
 import PassagensAereasPage from './pages/PassagensAereasPage';
 import ValidarDocumentoPage from './pages/ValidarDocumentoPage';
+import EmpresasTransportePage from './pages/EmpresasTransportePage';
+import TransporteTerceirizadoPage from './pages/TransporteTerceirizadoPage';
 
 import Layout from './components/Layout';
 
@@ -68,6 +70,8 @@ function App() {
           <Route path="casa-apoio" element={<CasaApoioPage />} />
           <Route path="medicos" element={<MedicosPage />} />
           <Route path="passagens-aereas" element={<PassagensAereasPage />} />
+          <Route path="empresas-transporte" element={<EmpresasTransportePage />} />
+          <Route path="transporte-terceirizado" element={<TransporteTerceirizadoPage />} />
           <Route path="*" element={<div>Página não encontrada ou Rota Inválida no App</div>} />
         </Route>
         <Route path="*" element={<div>Página não encontrada no Root</div>} />

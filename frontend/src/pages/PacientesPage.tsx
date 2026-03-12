@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../lib/api';
 import type { Paciente } from '../types';
-import { Search, Plus, ClipboardList, X } from 'lucide-react';
+import { Search, Plus, ClipboardList, X, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [editingPaciente, setEditingPaciente] = useState<Paciente | null>(null);
     const [form, setForm] = useState({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', cep: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
     const [saving, setSaving] = useState(false);
     const limit = 20;
@@ -74,6 +75,48 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
         }
     };
 
+    const handleEdit = async (paciente: Paciente) => {
+        setEditingPaciente(paciente);
+        setForm({
+            nome: paciente.nome,
+            cpf: paciente.cpf,
+            dataNascimento: format(new Date(paciente.dataNascimento), 'yyyy-MM-dd'),
+            sexo: paciente.sexo,
+            nomeMae: paciente.nomeMae,
+            telefone: paciente.telefone || '',
+            cep: paciente.cep || '',
+            endereco: paciente.endereco,
+            bairro: paciente.bairro,
+            cidade: paciente.cidade,
+            uf: paciente.uf,
+            cartaoSus: paciente.cartaoSus || ''
+        });
+        setShowModal(true);
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await api.put(`/pacientes/${editingPaciente!.id}`, form);
+            toast.success('Paciente atualizado!');
+            setShowModal(false);
+            setEditingPaciente(null);
+            setForm({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', cep: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
+            fetchData();
+        } catch (err: unknown) {
+            toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Erro ao atualizar.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingPaciente(null);
+        setForm({ nome: '', cpf: '', dataNascimento: '', sexo: 'MASCULINO', nomeMae: '', telefone: '', cep: '', endereco: '', bairro: '', cidade: '', uf: 'AM', cartaoSus: '' });
+    };
+
     const set = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
     const totalPages = Math.ceil(total / limit);
 
@@ -116,6 +159,7 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
                                         <th>Cartão SUS</th>
                                         <th>Telefone</th>
                                         <th>Cidade/UF</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -130,6 +174,11 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
                                             <td style={{ fontSize: 12 }}>{p.cartaoSus || '—'}</td>
                                             <td style={{ fontSize: 12 }}>{p.telefone || '—'}</td>
                                             <td style={{ fontSize: 12 }}>{p.cidade}/{p.uf}</td>
+                                            <td>
+                                                <button className="btn btn-icon btn-outline btn-sm" onClick={() => handleEdit(p)} title="Editar">
+                                                    <Edit2 size={14} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -145,13 +194,13 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
             </div>
 
             {showModal && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handleCloseModal()}>
                     <div className="modal">
                         <div className="modal-header">
-                            <span className="modal-title">Novo Paciente</span>
-                            <button className="btn btn-icon btn-outline" onClick={() => setShowModal(false)}><X size={16} /></button>
+                            <span className="modal-title">{editingPaciente ? 'Editar Paciente' : 'Novo Paciente'}</span>
+                            <button className="btn btn-icon btn-outline" onClick={handleCloseModal}><X size={16} /></button>
                         </div>
-                        <form onSubmit={handleCreate}>
+                        <form onSubmit={editingPaciente ? handleUpdate : handleCreate}>
                             <div className="modal-body">
                                 <div className="form-row form-row-2">
                                     <div className="form-group">
@@ -220,9 +269,9 @@ export default function PacientesPage({ onCreatedPaciente }: PacientesPageProps)
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancelar</button>
+                                <button type="button" className="btn btn-outline" onClick={handleCloseModal}>Cancelar</button>
                                 <button type="submit" className="btn btn-accent" disabled={saving}>
-                                    {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Cadastrar'}
+                                    {saving ? <span className="spinner" style={{ width: 16, height: 16 }} /> : (editingPaciente ? 'Atualizar' : 'Cadastrar')}
                                 </button>
                             </div>
                         </form>

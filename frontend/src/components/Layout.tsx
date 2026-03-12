@@ -22,6 +22,7 @@ import {
     X,
     Plane,
     Menu,
+    Truck,
 } from 'lucide-react';
 import type { Perfil } from '../types';
 
@@ -132,6 +133,16 @@ export default function Layout() {
                     <NavLink to="/veiculos" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <Car size={18} />
                         Frota de Veículos
+                    </NavLink>
+
+                    <NavLink to="/empresas-transporte" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <Truck size={18} />
+                        Empresas de Transporte
+                    </NavLink>
+
+                    <NavLink to="/transporte-terceirizado" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <Truck size={18} />
+                        Transporte Terceirizado
                     </NavLink>
 
                     <NavLink to="/motoristas" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>

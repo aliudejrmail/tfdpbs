@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PacientesPage from '../pages/PacientesPage';
 import api from '../lib/api';
-import type { Paciente, Unidade, Medico } from '../types';
+import type { Paciente, Unidade, Medico, EmpresaTransporte } from '../types';
 import toast from 'react-hot-toast';
 import { X, Search } from 'lucide-react';
 
@@ -33,14 +33,22 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
         ufDestino: '',
         hospitalDestino: '',
         tipoTransporte: 'ONIBUS',
+        transporteTerceirizado: false,
+        empresaTransporteId: '',
         acompanhante: false,
         nomeAcompanhante: '',
         prioridade: 1,
         observacoes: '',
     });
 
+    const [empresasTransporte, setEmpresasTransporte] = useState<EmpresaTransporte[]>([]);
+
     useEffect(() => {
         api.get('/unidades').then(r => setUnidades(r.data));
+    }, []);
+
+    useEffect(() => {
+        api.get('/empresas-transporte').then(r => setEmpresasTransporte(r.data));
     }, []);
 
     useEffect(() => {
@@ -257,6 +265,25 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                     <option value="PROPRIO">Transporte Próprio</option>
                                 </select>
                             </div>
+                            {(form.tipoTransporte === 'AMBULANCIA' || form.tipoTransporte === 'VAN') && (
+                                <div className="form-group">
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                                        <input type="checkbox" checked={form.transporteTerceirizado} onChange={e => set('transporteTerceirizado', e.target.checked)} />
+                                        Transporte Terceirizado?
+                                    </label>
+                                </div>
+                            )}
+                            {form.transporteTerceirizado && (
+                                <div className="form-group">
+                                    <label className="form-label">Empresa de Transporte</label>
+                                    <select className="form-control" value={form.empresaTransporteId} onChange={e => set('empresaTransporteId', e.target.value)}>
+                                        <option value="">Selecione a empresa...</option>
+                                        {empresasTransporte.filter(e => e.ativo && (e.tipo === form.tipoTransporte || e.tipo === 'TODOS')).map(e => (
+                                            <option key={e.id} value={e.id}>{e.nome} (CNPJ: {e.cnpj})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
                                     <input type="checkbox" checked={form.acompanhante} onChange={e => set('acompanhante', e.target.checked)} />

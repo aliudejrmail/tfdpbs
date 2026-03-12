@@ -53,7 +53,16 @@ export interface Paciente {
     bairro: string;
     cidade: string;
     uf: string;
+    cep?: string;
     cartaoSus?: string;
+}
+
+export interface EmpresaTransporte {
+    id: string;
+    nome: string;
+    cnpj: string;
+    ativo: boolean;
+    tipo: string;
 }
 
 export interface ProcessoTFD {
@@ -76,6 +85,9 @@ export interface ProcessoTFD {
     hospitalDestino?: string;
     medicoDestino?: string;
     tipoTransporte: TipoTransporte;
+    transporteTerceirizado?: boolean;
+    empresaTransporteId?: string;
+    empresaTransporte?: EmpresaTransporte;
     acompanhante: boolean;
     nomeAcompanhante?: string;
     status: StatusProcesso;
@@ -104,12 +116,16 @@ export interface HistoricoProcesso {
 
 export interface Passagem {
     id: string;
+    processoId: string;
+    linhaId?: string;
+    linha?: { id: string; nome: string; empresa?: string; origem: string; destino: string };
     tipo: 'IDA' | 'VOLTA';
     dataViagem: string;
     numeroPassagem?: string;
     empresa?: string;
     valor?: number;
     observacoes?: string;
+    processo?: { id: string; numero: string; paciente: { nome: string; cpf: string } };
 }
 
 export interface Documento {
@@ -119,6 +135,16 @@ export interface Documento {
     tipo: string;
     url: string;
     createdAt: string;
+}
+
+export interface Linha {
+    id: string;
+    nome: string;
+    empresa?: string;
+    origem: string;
+    destino: string;
+    horarios?: string;
+    ativo: boolean;
 }
 
 export interface DashboardStats {

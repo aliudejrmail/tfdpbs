@@ -18,6 +18,8 @@ import { casaApoioRouter } from './routes/casa-apoio.routes';
 import { qrcodeRouter } from './routes/qrcode.routes';
 import { medicosRouter } from './routes/medicos.routes';
 import { demandasPassagensRouter } from './routes/demandas-passagens.routes';
+import { empresasTransporteRouter } from './routes/empresas-transporte.routes';
+import { passagensRouter } from './routes/passagens.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -56,6 +58,8 @@ app.use('/api/casas-apoio', casaApoioRouter);
 app.use('/api/qrcode', qrcodeRouter);
 app.use('/api/medicos', medicosRouter);
 app.use('/api/passagens-aereas', demandasPassagensRouter);
+app.use('/api/empresas-transporte', empresasTransporteRouter);
+app.use('/api/passagens', passagensRouter);
 
 // Error handler
 app.use(errorHandler);
