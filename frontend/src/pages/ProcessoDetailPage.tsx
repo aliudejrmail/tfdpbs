@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import type { ProcessoTFD, StatusProcesso, Passagem, Linha } from '../types';
+import type { ProcessoTFD, StatusProcesso, Passagem, Linha, EmpresaTransporte } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,7 +55,7 @@ export default function ProcessoDetailPage() {
     const [motivoNegativa, setMotivoNegativa] = useState('');
     const [saving, setSaving] = useState(false);
     const [showEditLogistica, setShowEditLogistica] = useState(false);
-    const [editForm, setEditForm] = useState({ cidadeDestino: '', ufDestino: '', hospitalDestino: '', tipoTransporte: '' as any });
+    const [editForm, setEditForm] = useState({ cidadeDestino: '', ufDestino: '', hospitalDestino: '', tipoTransporte: '' as any, transporteTerceirizado: false, empresaTransporteId: '' });
     const [showCadastrarMedico, setShowCadastrarMedico] = useState(false);
     const [medicoForm, setMedicoForm] = useState({ nome: '', crm: '', especialidade: '' });
     const [passagens, setPassagens] = useState<Passagem[]>([]);
@@ -63,6 +63,7 @@ export default function ProcessoDetailPage() {
     const [editingPassagem, setEditingPassagem] = useState<Passagem | null>(null);
     const [passagemForm, setPassagemForm] = useState({ tipo: 'IDA' as 'IDA' | 'VOLTA', dataViagem: '', numeroPassagem: '', empresa: '', valor: '', observacoes: '', linhaId: '' });
     const [linhas, setLinhas] = useState<Linha[]>([]);
+    const [empresasTransporte, setEmpresasTransporte] = useState<EmpresaTransporte[]>([]);
 
     const canTransition = user?.perfil === 'REGULACAO' || user?.perfil === 'SEC_ADM';
     const canCadastrarMedico = user?.perfil === 'SEC_ADM' || user?.perfil === 'REGULACAO';
@@ -73,11 +74,13 @@ export default function ProcessoDetailPage() {
         Promise.all([
             api.get(`/processos/${id}`),
             api.get('/passagens', { params: { processoId: id } }),
-            api.get('/linhas-onibus', { params: { ativo: 'true' } })
-        ]).then(([processoRes, passagensRes, linhasRes]) => {
+            api.get('/linhas-onibus', { params: { ativo: 'true' } }),
+            api.get('/empresas-transporte', { params: { ativo: 'true' } })
+        ]).then(([processoRes, passagensRes, linhasRes, empresasRes]) => {
             setProcesso(processoRes.data);
             setPassagens(passagensRes.data);
             setLinhas(linhasRes.data);
+            setEmpresasTransporte(empresasRes.data);
         }).finally(() => setLoading(false));
     }, [id, showPassagemModal]);
 
@@ -148,6 +151,8 @@ export default function ProcessoDetailPage() {
             ufDestino: processo.ufDestino,
             hospitalDestino: processo.hospitalDestino || '',
             tipoTransporte: processo.tipoTransporte,
+            transporteTerceirizado: processo.transporteTerceirizado || false,
+            empresaTransporteId: processo.empresaTransporteId || '',
         });
         setShowEditLogistica(true);
     };
@@ -280,35 +285,35 @@ export default function ProcessoDetailPage() {
             <div className="page" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
                 {/* Main */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                                        {/* Documentos */}
-                                        <div className="card">
-                                            <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                Anexos / Documentos
-                                            </div>
-                                            <div>
-                                                {processo?.documentos && processo.documentos.length > 0 ? (
-                                                    <ul style={{ marginBottom: 12 }}>
-                                                        {processo.documentos.map(doc => (
-                                                            <li key={doc.id} style={{ marginBottom: 6 }}>
-                                                                <a href={`http://localhost:3333${doc.url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2b6cb0', textDecoration: 'underline' }}>
-                                                                    {doc.nome}
-                                                                </a>
-                                                                <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>({doc.tipo})</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum documento anexado.</span>
-                                                )}
-                                            </div>
-                                            <form onSubmit={handleFileUpload} style={{ marginTop: 8 }}>
-                                                <input ref={fileInputRef} type="file" accept=".pdf,image/jpeg,image/png" style={{ marginRight: 8 }} disabled={uploading} />
-                                                <button className="btn btn-accent btn-sm" type="submit" disabled={uploading}>
-                                                    {uploading ? 'Enviando...' : 'Anexar Arquivo'}
-                                                </button>
-                                            </form>
-                                            {uploadError && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 4 }}>{uploadError}</div>}
-                                        </div>
+                    {/* Documentos */}
+                    <div className="card">
+                        <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            Anexos / Documentos
+                        </div>
+                        <div>
+                            {processo?.documentos && processo.documentos.length > 0 ? (
+                                <ul style={{ marginBottom: 12 }}>
+                                    {processo.documentos.map(doc => (
+                                        <li key={doc.id} style={{ marginBottom: 6 }}>
+                                            <a href={`http://localhost:3333${doc.url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2b6cb0', textDecoration: 'underline' }}>
+                                                {doc.nome}
+                                            </a>
+                                            <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>({doc.tipo})</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>Nenhum documento anexado.</span>
+                            )}
+                        </div>
+                        <form onSubmit={handleFileUpload} style={{ marginTop: 8 }}>
+                            <input ref={fileInputRef} type="file" accept=".pdf,image/jpeg,image/png" style={{ marginRight: 8 }} disabled={uploading} />
+                            <button className="btn btn-accent btn-sm" type="submit" disabled={uploading}>
+                                {uploading ? 'Enviando...' : 'Anexar Arquivo'}
+                            </button>
+                        </form>
+                        {uploadError && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 4 }}>{uploadError}</div>}
+                    </div>
                     {/* Paciente */}
                     <div className="card">
                         <div className="card-title">Dados do Paciente</div>
@@ -376,6 +381,12 @@ export default function ProcessoDetailPage() {
                                     {transporteLabel[processo.tipoTransporte]}
                                 </span>
                             </div>
+                            {processo.transporteTerceirizado && processo.empresaTransporte && (
+                                <div className="detail-item">
+                                    <label>Empresa</label>
+                                    <span>{processo.empresaTransporte.nome}</span>
+                                </div>
+                            )}
                             <div className="detail-item"><label>Acompanhante</label><span>{processo.acompanhante ? processo.nomeAcompanhante || 'Sim' : 'Não'}</span></div>
                             {processo.dataAgendada && (
                                 <div className="detail-item">
@@ -553,6 +564,28 @@ export default function ProcessoDetailPage() {
                                     <option value="PROPRIO">Transporte Próprio</option>
                                 </select>
                             </div>
+
+                            {(editForm.tipoTransporte === 'AMBULANCIA' || editForm.tipoTransporte === 'VAN') && (
+                                <>
+                                    <div className="form-group">
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                                            <input type="checkbox" checked={editForm.transporteTerceirizado} onChange={e => setEditForm(f => ({ ...f, transporteTerceirizado: e.target.checked }))} />
+                                            Transporte Terceirizado?
+                                        </label>
+                                    </div>
+                                    {editForm.transporteTerceirizado && (
+                                        <div className="form-group">
+                                            <label className="form-label">Empresa de Transporte</label>
+                                            <select className="form-control" value={editForm.empresaTransporteId} onChange={e => setEditForm(f => ({ ...f, empresaTransporteId: e.target.value }))}>
+                                                <option value="">Selecione a empresa...</option>
+                                                {empresasTransporte.filter(e => e.ativo && (e.tipo === editForm.tipoTransporte || e.tipo === 'TODOS')).map(e => (
+                                                    <option key={e.id} value={e.id}>{e.nome}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-outline" onClick={() => setShowEditLogistica(false)}>Cancelar</button>
