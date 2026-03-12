@@ -6,7 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, User, X, FileText, Printer, UserPlus, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Clock, Plane, Ambulance, Bus, Car, User, X, FileText, Printer, UserPlus, Plus, Trash2, Edit2, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { gerarCapaProcesso, gerarProtocoloEntrega } from '../lib/pdfGenerator';
 
@@ -482,34 +482,54 @@ export default function ProcessoDetailPage() {
                         </div>
                     )}
 
-                    {/* Escala de Viagens (Frota Própria) */}
+                    {/* Escala de Viagens (Frota Própria) ou Transporte Terceirizado */}
                     {(processo.tipoTransporte === 'AMBULANCIA' || processo.tipoTransporte === 'VAN' || (processo.viagens && processo.viagens.length > 0)) && (
                         <div className="card" style={{ marginTop: 16 }}>
-                            <div className="card-title">Escala de Viagem (Frota)</div>
-                            {processo.viagens && processo.viagens.length > 0 ? (
+                            <div className="card-title">
+                                {processo.transporteTerceirizado ? 'Transporte Terceirizado' : 'Escala de Viagem (Frota)'}
+                            </div>
+
+                            {processo.transporteTerceirizado ? (
                                 <div>
-                                    {processo.viagens.map((pv, index) => (
-                                        <div key={pv.id} style={{ padding: '10px 0', borderBottom: index === (processo.viagens?.length || 0) - 1 ? 'none' : '1px solid var(--border)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                                <span style={{ fontWeight: 600 }}>{format(new Date(pv.viagem.dataPartida), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                                                <span className="badge" style={{ fontSize: 10 }}>{pv.viagem.status}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                                                <Car size={12} />
-                                                <span>{pv.viagem.veiculo?.modelo} ({pv.viagem.veiculo?.placa})</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                                                <User size={12} />
-                                                <span>{pv.viagem.motorista?.nome}</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#00c2a8', fontWeight: 600, fontSize: 13, marginBottom: 8 }}>
+                                        <Truck size={14} />
+                                        <span>Vínculo com Empresa</span>
+                                    </div>
+                                    <div style={{ padding: '10px', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Empresa Vinculada:</div>
+                                        <div style={{ fontSize: 13, fontWeight: 500 }}>{processo.empresaTransporte?.nome || 'Empresa não selecionada'}</div>
+                                        {processo.empresaTransporte?.cnpj && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>CNPJ: {processo.empresaTransporte.cnpj}</div>}
+                                    </div>
+                                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.4 }}>
+                                        Este transporte é realizado por empresa contratada. Não é necessário criar registro no menu de Escala de Viagens.
+                                    </p>
                                 </div>
                             ) : (
-                                <div>
-                                    <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>Nenhuma viagem escalada para este processo.</p>
-                                    <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Utilize o menu <strong>Viagens</strong> para alocar o paciente a um veículo da frota.</p>
-                                </div>
+                                processo.viagens && processo.viagens.length > 0 ? (
+                                    <div>
+                                        {processo.viagens.map((pv, index) => (
+                                            <div key={pv.id} style={{ padding: '10px 0', borderBottom: index === (processo.viagens?.length || 0) - 1 ? 'none' : '1px solid var(--border)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                                    <span style={{ fontWeight: 600 }}>{format(new Date(pv.viagem.dataPartida), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                                    <span className="badge" style={{ fontSize: 10 }}>{pv.viagem.status}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                                                    <Car size={12} />
+                                                    <span>{pv.viagem.veiculo?.modelo} ({pv.viagem.veiculo?.placa})</span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                                                    <User size={12} />
+                                                    <span>{pv.viagem.motorista?.nome}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>Nenhuma viagem escalada para este processo.</p>
+                                        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Utilize o menu <strong>Viagens</strong> para alocar o paciente a um veículo da frota municipal.</p>
+                                    </div>
+                                )
                             )}
                         </div>
                     )}
