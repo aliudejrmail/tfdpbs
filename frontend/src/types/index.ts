@@ -174,3 +174,10 @@ export interface DashboardStats {
     concluidos: number;
     cancelados: number;
 }
+
+export interface DashboardMetricas {
+    tempoMedioAprovacao: number;
+    processosAprovadosMes: number;
+    rankingUnidades: { nome: string; cnes: string; total: number }[];
+    especialidadesTop: { especialidade: string; total: number }[];
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Truck, Search, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -39,6 +40,7 @@ const statusLabel: Record<string, string> = {
 };
 
 export default function TransporteTerceirizadoPage() {
+    const navigate = useNavigate();
     const [processos, setProcessos] = useState<Processo[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -176,7 +178,7 @@ export default function TransporteTerceirizadoPage() {
                                         <td style={{ fontSize: 12 }}>{format(new Date(p.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</td>
                                         <td>
                                             <button className="btn btn-icon btn-outline btn-sm"
-                                                onClick={() => window.open(`/processos/${p.id}`, '_blank')}
+                                                onClick={() => navigate(`/processos/${p.id}`)}
                                                 title="Ver processo">
                                                 <FileText size={14} />
                                             </button>

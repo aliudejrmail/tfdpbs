@@ -145,9 +145,73 @@ viagensRouter.delete('/:id/passageiros/:passageiroId', authorize('SEC_ADM', 'REG
 // Processos aprovados disponíveis para alocar
 viagensRouter.get('/processos/disponiveis', async (_req: Request, res: Response) => {
     const processos = await prisma.processoTFD.findMany({
-        where: { status: { in: ['APROVADO', 'AGENDADO'] } },
+        where: { 
+            status: { in: ['APROVADO', 'AGENDADO'] },
+            // Excluir processos que já têm viagem com status diferente de CANCELADA
+            viagens: {
+                none: {
+                    viagem: {
+                        status: { not: 'CANCELADA' }
+                    }
+                }
+            }
+        },
         include: { paciente: true, unidadeOrigem: true },
         orderBy: { createdAt: 'desc' },
     });
     res.json(processos);
+});
+
+// Adicionar processo à viagem existente
+viagensRouter.post('/:id/adicionar-processo', authorize('SEC_ADM', 'REGULACAO'), async (req: Request, res: Response) => {
+    try {
+        const { processoId, acompanhante } = z.object({
+            processoId: z.string(),
+            acompanhante: z.boolean().default(false),
+        }).parse(req.body);
+
+        const viagem = await db.viagem.findUnique({
+            where: { id: req.params.id as string },
+            include: { passageiros: true }
+        });
+
+        if (!viagem) {
+            res.status(404).json({ error: 'Viagem não encontrada.' });
+            return;
+        }
+
+        if (viagem.status !== 'PLANEJADA') {
+            res.status(400).json({ error: 'Só é possível adicionar passageiros em viagens planejadas.' });
+            return;
+        }
+
+        // Verificar se processo já está nesta viagem
+        const alreadyInViagem = viagem.passageiros.some((p: any) => p.processoId === processoId);
+        if (alreadyInViagem) {
+            res.status(400).json({ error: 'Processo já está nesta viagem.' });
+            return;
+        }
+
+        const passageiro = await db.passageiroViagem.create({
+            data: { 
+                processoId, 
+                acompanhante,
+                viagemId: req.params.id as string 
+            },
+            include: { processo: { include: { paciente: true } } }
+        });
+
+        await logAction({ 
+            req, 
+            acao: 'CREATE', 
+            entidade: 'PROCESSO', 
+            entidadeId: req.params.id as string, 
+            detalhes: `Processo ${processoId} adicionado à viagem.` 
+        });
+
+        res.status(201).json(passageiro);
+    } catch (err) {
+        if (err instanceof z.ZodError) return res.status(400).json({ error: 'Erro de validação.' });
+        throw err;
+    }
 });

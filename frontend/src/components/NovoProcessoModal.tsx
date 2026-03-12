@@ -3,7 +3,7 @@ import PacientesPage from '../pages/PacientesPage';
 import api from '../lib/api';
 import type { Paciente, Unidade, Medico, EmpresaTransporte } from '../types';
 import toast from 'react-hot-toast';
-import { X, Search } from 'lucide-react';
+import { X, Search, Plane, ClipboardList } from 'lucide-react';
 
 interface Props {
     onClose: () => void;
@@ -39,7 +39,28 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
         nomeAcompanhante: '',
         prioridade: 1,
         observacoes: '',
+        criarDemandaPassagem: false,
+        dataIda: '',
+        dataVolta: '',
+        justificativaPassagem: '',
+        necessitaUrgencia: false,
     });
+
+    // Documentos sugeridos por especialidade
+    const documentosSugeridos: Record<string, string[]> = {
+        'CARDIOLOGIA': ['Eletrocardiograma', 'Holter 24h', 'Ecocardiograma'],
+        'ORTOPEDIA': ['Raio-X', 'Ressonância Magnética', 'Relatório de Fisioterapia'],
+        'NEUROLOGIA': ['Eletroencefalograma', 'Ressonância de Crânio', 'Laudo Neurológico'],
+        'ONCOLOGIA': ['Biópsia', 'Exames de Imagem', 'Laudo Anatomopatológico'],
+        'OFTALMOLOGIA': ['Mapeamento de Retina', 'Tonometria', 'Acuidade Visual'],
+        'GASTROENTEROLOGIA': ['Endoscopia', 'Colonoscopia', 'Ultrassom Abdominal'],
+        'NEFROLOGIA': ['Ultrassom de Vias Urinárias', 'Exames de Sangue', 'Biopsia Renal'],
+        'PNEUMOLOGIA': ['Raio-X de Tórax', 'Espirometria', 'Tomografia de Tórax'],
+    };
+
+    const documentosEspecialidade = form.especialidade.toUpperCase() 
+        ? documentosSugeridos[form.especialidade.toUpperCase()] 
+        : undefined;
 
     const [empresasTransporte, setEmpresasTransporte] = useState<EmpresaTransporte[]>([]);
 
@@ -265,17 +286,54 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                     <option value="PROPRIO">Transporte Próprio</option>
                                 </select>
                             </div>
+
+                            {/* Passagem Aérea - Criação automática de demanda */}
+                            {form.tipoTransporte === 'AEREO' && (
+                                <div className="card" style={{ padding: 12, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 'var(--radius-sm)', marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                        <Plane size={16} style={{ color: 'var(--info)' }} />
+                                        <strong style={{ fontSize: 13, color: 'var(--info)' }}>Solicitação de Passagem Aérea</strong>
+                                    </div>
+                                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                                        Uma demanda de passagem aérea será criada automaticamente para este processo.
+                                    </p>
+                                    <div className="form-row form-row-2">
+                                        <div className="form-group">
+                                            <label className="form-label" style={{ fontSize: 12 }}>Data de Ida</label>
+                                            <input type="date" className="form-control" value={form.dataIda} onChange={e => set('dataIda', e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label" style={{ fontSize: 12 }}>Data de Volta</label>
+                                            <input type="date" className="form-control" value={form.dataVolta} onChange={e => set('dataVolta', e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label" style={{ fontSize: 12 }}>Justificativa</label>
+                                        <textarea className="form-control" rows={2} value={form.justificativaPassagem} onChange={e => set('justificativaPassagem', e.target.value)} 
+                                            placeholder="Ex: Paciente necessita de tratamento especializado não disponível na região..." />
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+                                        <input type="checkbox" checked={form.necessitaUrgencia} onChange={e => set('necessitaUrgencia', e.target.checked)} />
+                                        Solicita urgência na emissão
+                                    </label>
+                                </div>
+                            )}
+
                             {(form.tipoTransporte === 'AMBULANCIA' || form.tipoTransporte === 'VAN') && (
                                 <div className="form-group">
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
                                         <input type="checkbox" checked={form.transporteTerceirizado} onChange={e => set('transporteTerceirizado', e.target.checked)} />
                                         Transporte Terceirizado?
+                                        <span className="tooltip" style={{ marginLeft: 4, cursor: 'help', color: 'var(--text-muted)' }} title="Selecione uma empresa parceira para realizar o transporte">ⓘ</span>
                                     </label>
                                 </div>
                             )}
                             {form.transporteTerceirizado && (
                                 <div className="form-group">
-                                    <label className="form-label">Empresa de Transporte</label>
+                                    <label className="form-label">
+                                        Empresa de Transporte
+                                        <span className="tooltip" style={{ marginLeft: 4, cursor: 'help', color: 'var(--text-muted)', fontSize: 12 }} title="Selecione uma empresa parceira para realizar o transporte">ⓘ</span>
+                                    </label>
                                     <select className="form-control" value={form.empresaTransporteId} onChange={e => set('empresaTransporteId', e.target.value)}>
                                         <option value="">Selecione a empresa...</option>
                                         {empresasTransporte.filter(e => e.ativo && (e.tipo === form.tipoTransporte || e.tipo === 'TODOS')).map(e => (
@@ -284,6 +342,25 @@ export default function NovoProcessoModal({ onClose, onCreated }: Props) {
                                     </select>
                                 </div>
                             )}
+
+                            {/* Documentos Sugeridos por Especialidade */}
+                            {documentosEspecialidade && (
+                                <div className="card" style={{ padding: 12, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 'var(--radius-sm)', marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                        <ClipboardList size={16} style={{ color: 'var(--success)' }} />
+                                        <strong style={{ fontSize: 13, color: 'var(--success)' }}>Documentos Sugeridos para {form.especialidade}</strong>
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: 'var(--text-muted)' }}>
+                                        {documentosEspecialidade.map((doc, i) => (
+                                            <li key={i}>{doc}</li>
+                                        ))}
+                                    </ul>
+                                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>
+                                        ⚠️ Estes documentos podem ser solicitados durante a análise do processo
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="form-group">
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
                                     <input type="checkbox" checked={form.acompanhante} onChange={e => set('acompanhante', e.target.checked)} />

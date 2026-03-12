@@ -93,6 +93,18 @@ export default function Layout() {
             )}
 
             <nav className={`sidebar ${isMenuOpen ? 'open' : ''}`}>
+                <style>{`
+                    .sidebar-section-title {
+                        font-size: 11px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        color: var(--text-muted);
+                        padding: 12px 16px 8px;
+                        margin-top: 8px;
+                        letter-spacing: 0.5px;
+                        border-top: 1px solid var(--border);
+                    }
+                `}</style>
                 <div className="sidebar-brand">
                     <h1>TFD Conecta</h1>
                     <p>Sistema de Gestão</p>
@@ -104,6 +116,8 @@ export default function Layout() {
                         <LayoutDashboard size={18} />
                         Dashboard
                     </NavLink>
+
+                    <div className="sidebar-section-title">Gestão de Processos</div>
 
                     <NavLink to="/processos" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <FileText size={18} />
@@ -125,6 +139,8 @@ export default function Layout() {
                         Passagens Aéreas
                     </NavLink>
 
+                    <div className="sidebar-section-title">Transporte e Logística</div>
+
                     <NavLink to="/linhas-onibus" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <Bus size={18} />
                         Linhas de Ônibus
@@ -133,16 +149,6 @@ export default function Layout() {
                     <NavLink to="/veiculos" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <Car size={18} />
                         Frota de Veículos
-                    </NavLink>
-
-                    <NavLink to="/empresas-transporte" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
-                        <Truck size={18} />
-                        Empresas de Transporte
-                    </NavLink>
-
-                    <NavLink to="/transporte-terceirizado" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
-                        <Truck size={18} />
-                        Transporte Terceirizado
                     </NavLink>
 
                     <NavLink to="/motoristas" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
@@ -154,6 +160,18 @@ export default function Layout() {
                         <CalendarDays size={18} />
                         Escala de Viagens
                     </NavLink>
+
+                    <NavLink to="/empresas-transporte" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <Truck size={18} />
+                        Empresas Parceiras
+                    </NavLink>
+
+                    <NavLink to="/transporte-terceirizado" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+                        <ClipboardList size={18} />
+                        Frota Terceirizada
+                    </NavLink>
+
+                    <div className="sidebar-section-title">Administrativo</div>
 
                     <NavLink to="/financeiro" onClick={() => setIsMenuOpen(false)} className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                         <DollarSign size={18} />

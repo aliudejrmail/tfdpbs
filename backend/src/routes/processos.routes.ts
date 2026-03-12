@@ -66,11 +66,19 @@ const processoSchema = z.object({
     hospitalDestino: z.string().optional(),
     medicoDestino: z.string().optional(),
     tipoTransporte: z.enum(['ONIBUS', 'VAN', 'AMBULANCIA', 'AEREO', 'PROPRIO']),
+    transporteTerceirizado: z.boolean().default(false),
+    empresaTransporteId: z.string().uuid().optional().transform(v => v === '' ? undefined : v).nullish(),
     acompanhante: z.boolean().default(false),
     nomeAcompanhante: z.string().optional(),
     cpfAcompanhante: z.string().optional(),
     prioridade: z.number().int().min(1).max(3).default(1),
     observacoes: z.string().optional(),
+    // Campos para criação automática de demanda de passagem aérea
+    criarDemandaPassagem: z.boolean().optional(),
+    dataIda: z.string().optional().transform(v => v ? new Date(v) : undefined),
+    dataVolta: z.string().optional().transform(v => v ? new Date(v) : undefined),
+    justificativaPassagem: z.string().optional(),
+    necessitaUrgencia: z.boolean().default(false),
 });
 
 async function gerarNumero(): Promise<string> {
@@ -152,7 +160,7 @@ processosRouter.get('/', async (req: Request, res: Response) => {
                 unidadeOrigem: { select: { id: true, nome: true, cnes: true } },
                 abertoPor: { select: selectUsuarioPublico },
                 reguladoPor: { select: selectUsuarioPublico },
-                empresaTransporte: terceirizados === 'true' ? true : undefined,
+                empresaTransporte: true,
             },
         }),
     ]);
@@ -169,6 +177,7 @@ processosRouter.get('/:id', async (req: Request, res: Response) => {
             abertoPor: { select: selectUsuarioPublico },
             reguladoPor: { select: selectUsuarioPublico },
             medico: true,
+            empresaTransporte: true,
             historico: {
                 orderBy: { createdAt: 'desc' },
                 include: { usuario: { select: selectUsuarioPublico } },
@@ -206,6 +215,23 @@ processosRouter.post('/', authorize('UBS', 'ATENDENTE', 'SEC_ADM'), async (req: 
             },
         });
 
+        // Criar demanda de passagem aérea automaticamente se tipoTransporte = AEREO ou se solicitado
+        if (data.tipoTransporte === 'AEREO' || data.criarDemandaPassagem) {
+            await prisma.demandaPassagemAerea.create({
+                data: {
+                    processoId: processo.id,
+                    origem: 'Parauapebas',
+                    destino: `${processo.cidadeDestino}/${processo.ufDestino}`,
+                    dataIda: data.dataIda || new Date(),
+                    dataVolta: data.dataVolta || undefined,
+                    justificativa: data.justificativaPassagem || `Solicitação de passagem aérea para processo ${numero}`,
+                    necessitaUrgencia: data.necessitaUrgencia,
+                    status: 'PENDENTE',
+                    solicitadoPorId: req.user!.userId,
+                },
+            });
+        }
+
         await logAction({
             req,
             acao: 'CREATE',
@@ -236,9 +262,18 @@ processosRouter.put('/:id', authorize('REGULACAO', 'SEC_ADM', 'ATENDENTE'), asyn
         const processoAntigo = await prisma.processoTFD.findUnique({ where: { id: getParam(req.params, 'id') } });
         if (!processoAntigo) { res.status(404).json({ error: 'Processo não encontrado.' }); return; }
 
+        // Converter string vazia em undefined para campos opcionais
+        const updateData: any = { ...data };
+        if (data.empresaTransporteId === '') {
+            updateData.empresaTransporteId = null;
+        }
+
+        console.log('[PUT Processo] Dados recebidos:', data);
+        console.log('[PUT Processo] empresaTransporteId:', data.empresaTransporteId, '-> updateData:', updateData.empresaTransporteId);
+
         const processo = await prisma.processoTFD.update({
             where: { id: getParam(req.params, 'id') },
-            data,
+            data: updateData,
         });
 
         // Registrar no histórico se o destino mudou

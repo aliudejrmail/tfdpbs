@@ -64,6 +64,9 @@ export default function ProcessoDetailPage() {
     const [passagemForm, setPassagemForm] = useState({ tipo: 'IDA' as 'IDA' | 'VOLTA', dataViagem: '', numeroPassagem: '', empresa: '', valor: '', observacoes: '', linhaId: '' });
     const [linhas, setLinhas] = useState<Linha[]>([]);
     const [empresasTransporte, setEmpresasTransporte] = useState<EmpresaTransporte[]>([]);
+    const [viagensDisponiveis, setViagensDisponiveis] = useState<any[]>([]);
+    const [showAdicionarViagem, setShowAdicionarViagem] = useState(false);
+    const [acompanhanteNaViagem, setAcompanhanteNaViagem] = useState(false);
 
     const canTransition = user?.perfil === 'REGULACAO' || user?.perfil === 'SEC_ADM';
     const canCadastrarMedico = user?.perfil === 'SEC_ADM' || user?.perfil === 'REGULACAO';
@@ -83,6 +86,40 @@ export default function ProcessoDetailPage() {
             setEmpresasTransporte(empresasRes.data);
         }).finally(() => setLoading(false));
     }, [id, showPassagemModal]);
+
+    const loadViagensDisponiveis = async () => {
+        try {
+            const { data } = await api.get('/viagens', { params: { status: 'PLANEJADA' } });
+            setViagensDisponiveis(data);
+        } catch (err) {
+            console.error('Erro ao carregar viagens:', err);
+        }
+    };
+
+    const handleOpenAdicionarViagem = async () => {
+        await loadViagensDisponiveis();
+        setAcompanhanteNaViagem(processo?.acompanhante || false);
+        setShowAdicionarViagem(true);
+    };
+
+    const handleAdicionarViagem = async (viagemId: string) => {
+        setSaving(true);
+        try {
+            await api.post(`/viagens/${viagemId}/adicionar-processo`, {
+                processoId: id,
+                acompanhante: acompanhanteNaViagem
+            });
+            toast.success('Processo adicionado à viagem!');
+            setShowAdicionarViagem(false);
+            // Recarregar dados do processo
+            const { data } = await api.get(`/processos/${id}`);
+            setProcesso(data);
+        } catch (err: any) {
+            toast.error(err?.response?.data?.error || 'Erro ao adicionar à viagem.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -530,6 +567,16 @@ export default function ProcessoDetailPage() {
                                     </div>
                                 )
                             )}
+
+                            {/* Botão para adicionar à viagem quando processo estiver APROVADO ou AGENDADO */}
+                            {!processo.transporteTerceirizado && ['APROVADO', 'AGENDADO'].includes(processo.status) && (!processo.viagens || processo.viagens.length === 0) && (
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                                    <button className="btn btn-accent" onClick={handleOpenAdicionarViagem} style={{ fontSize: 13, padding: '8px 16px' }}>
+                                        <Plus size={16} />
+                                        Adicionar à Escala de Viagem
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -746,6 +793,93 @@ export default function ProcessoDetailPage() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Adicionar à Viagem */}
+            {showAdicionarViagem && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowAdicionarViagem(false)}>
+                    <div className="modal" style={{ maxWidth: 560 }}>
+                        <div className="modal-header">
+                            <span className="modal-title">Adicionar Processo à Viagem</span>
+                            <button className="btn btn-icon btn-outline" onClick={() => setShowAdicionarViagem(false)}><X size={16} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+                                Selecione uma viagem planejada para adicionar o processo <strong>{processo?.numero}</strong>.
+                            </p>
+
+                            <div className="form-group">
+                                <label className="form-label">Acompanhante</label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                                    <input type="checkbox" checked={acompanhanteNaViagem} onChange={e => setAcompanhanteNaViagem(e.target.checked)} />
+                                    {processo?.acompanhante ? 'Manter acompanhante' : 'Adicionar acompanhante'}
+                                </label>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Viagens Disponíveis</label>
+                                {viagensDisponiveis.length === 0 ? (
+                                    <div style={{ padding: 16, textAlign: 'center', background: 'var(--bg-card2)', borderRadius: 'var(--radius-sm)' }}>
+                                        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nenhuma viagem planejada encontrada.</p>
+                                        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>Crie uma nova viagem no menu <strong>Viagens</strong>.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {viagensDisponiveis.map(v => (
+                                            <div
+                                                key={v.id}
+                                                onClick={() => handleAdicionarViagem(v.id)}
+                                                style={{
+                                                    padding: '12px',
+                                                    border: '1px solid var(--border)',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.borderColor = 'var(--accent)';
+                                                    e.currentTarget.style.background = 'rgba(0,194,168,0.05)';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.borderColor = 'var(--border)';
+                                                    e.currentTarget.style.background = 'transparent';
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                                    <strong style={{ fontSize: 13 }}>{format(new Date(v.dataPartida), 'dd/MM/yyyy', { locale: ptBR })}</strong>
+                                                    <span className="badge" style={{ fontSize: 10 }}>PLANEJADA</span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-muted)' }}>
+                                                    {v.veiculo && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Car size={12} />
+                                                            <span>{v.veiculo.modelo} ({v.veiculo.placa})</span>
+                                                        </div>
+                                                    )}
+                                                    {v.motorista && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <User size={12} />
+                                                            <span>{v.motorista.nome}</span>
+                                                        </div>
+                                                    )}
+                                                    {v.linha && (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <Bus size={12} />
+                                                            <span>{v.linha.nome}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
+                                                    {v.passageiros?.length || 0} passageiro(s) alocado(s)
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
