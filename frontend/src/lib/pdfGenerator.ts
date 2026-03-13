@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { ProcessoTFD } from '../types';
+import { LOGO_BASE64 } from './logo';
 
 /**
  * Gera a Capa do Processo TFD
@@ -11,21 +12,21 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Adicionar logotipo
+    // Adicionar logotipo (Otimizado para máxima fidelidade e nitidez)
     try {
-        const logoPath = '/logo_pref.png';
-        doc.addImage(logoPath, 'PNG', pageWidth / 2 - 20, 8, 40, 40);
+        // 'FAST' ou 'NONE' na compressão garante que o jsPDF não degrade a imagem Base64
+        doc.addImage(LOGO_BASE64, 'PNG', pageWidth / 2 - 12, 10, 24, 0, undefined, 'FAST');
     } catch (err) {
         console.error('Erro ao carregar logotipo:', err);
     }
 
-    // Cabeçalho
+    // Cabeçalho (Aproximado do logo)
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 52, { align: 'center' });
+    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 45, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 57, { align: 'center' });
-    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 62, { align: 'center' });
+    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 50, { align: 'center' });
+    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 55, { align: 'center' });
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
@@ -95,7 +96,9 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
     doc.line(120, finalY, 170, finalY);
     doc.text('Carimbo da Unidade', 130, finalY + 5);
 
-    doc.save(`CAPA_${processo.numero}.pdf`);
+    // Exibir PDF no navegador em vez de baixar
+    const pdfData = doc.output('bloburl');
+    window.open(pdfData, '_blank');
 }
 
 /**
@@ -105,21 +108,21 @@ export function gerarProtocoloEntrega(processo: ProcessoTFD) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Adicionar logotipo
+    // Adicionar logotipo (Otimizado para máxima fidelidade e nitidez)
     try {
-        const logoPath = '/logo_pref.png';
-        doc.addImage(logoPath, 'PNG', pageWidth / 2 - 20, 8, 40, 40);
+        // 'FAST' ou 'NONE' na compressão garante que o jsPDF não degrade a imagem Base64
+        doc.addImage(LOGO_BASE64, 'PNG', pageWidth / 2 - 12, 10, 24, 0, undefined, 'FAST');
     } catch (err) {
         console.error('Erro ao carregar logotipo:', err);
     }
 
-    // Cabeçalho
+    // Cabeçalho (Aproximado do logo)
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 52, { align: 'center' });
+    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 45, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 57, { align: 'center' });
-    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 62, { align: 'center' });
+    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 50, { align: 'center' });
+    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 55, { align: 'center' });
 
     doc.setLineWidth(0.5);
     doc.line(20, 68, pageWidth - 20, 68);
@@ -154,5 +157,7 @@ export function gerarProtocoloEntrega(processo: ProcessoTFD) {
     doc.line(pageWidth / 2 - 40, finalY, pageWidth / 2 + 40, finalY);
     doc.text('Assinatura do Paciente / Responsável', pageWidth / 2, finalY + 5, { align: 'center' });
 
-    doc.save(`PROTOCOLO_${processo.numero}.pdf`);
+    // Exibir PDF no navegador em vez de baixar
+    const pdfData = doc.output('bloburl');
+    window.open(pdfData, '_blank');
 }
