@@ -11,30 +11,40 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Adicionar logotipo
+    try {
+        const logoPath = '/logo_pref.png';
+        doc.addImage(logoPath, 'PNG', pageWidth / 2 - 20, 8, 40, 40);
+    } catch (err) {
+        console.error('Erro ao carregar logotipo:', err);
+    }
+
     // Cabeçalho
     doc.setFontSize(10);
-    doc.text('ESTADO DO AMAZONAS', pageWidth / 2, 15, { align: 'center' });
-    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 20, { align: 'center' });
-    doc.text('DIRCA - DIREÇÃO DE REGULAÇÃO, CONTROLE E AVALIAÇÃO', pageWidth / 2, 25, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 52, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 57, { align: 'center' });
+    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 62, { align: 'center' });
 
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('CAPA DE PROCESSO TFD', pageWidth / 2, 40, { align: 'center' });
+    doc.text('CAPA DE PROCESSO TFD', pageWidth / 2, 75, { align: 'center' });
 
     doc.setLineWidth(0.5);
-    doc.line(20, 45, pageWidth - 20, 45);
+    doc.line(20, 80, pageWidth - 20, 80);
 
     // Número do Processo (Destaque)
     doc.setFontSize(24);
-    doc.text(processo.numero, pageWidth / 2, 60, { align: 'center' });
+    doc.text(processo.numero, pageWidth / 2, 95, { align: 'center' });
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Data de Abertura: ${format(new Date(processo.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, pageWidth / 2, 68, { align: 'center' });
+    doc.text(`Data de Abertura: ${format(new Date(processo.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, pageWidth / 2, 103, { align: 'center' });
 
     // Tabela de Dados do Paciente
     autoTable(doc, {
-        startY: 80,
+        startY: 115,
         head: [['DADOS DO PACIENTE', '']],
         body: [
             ['Nome Completo:', processo.paciente?.nome || ''],
@@ -49,7 +59,7 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
 
     // Tabela de Dados Clínicos
     autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 10,
+        startY: (doc as any).lastAutoTable.finalY + 15,
         head: [['INFORMAÇÕES CLÍNICAS', '']],
         body: [
             ['Especialidade:', processo.especialidade],
@@ -64,7 +74,7 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
 
     // Tabela de Destino e Transporte
     autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 10,
+        startY: (doc as any).lastAutoTable.finalY + 15,
         head: [['DESTINO E LOGÍSTICA', '']],
         body: [
             ['Cidade Destino:', `${processo.cidadeDestino} - ${processo.ufDestino}`],
@@ -78,7 +88,7 @@ export function gerarCapaProcesso(processo: ProcessoTFD) {
     });
 
     // Rodapé / Assinaturas
-    const finalY = (doc as any).lastAutoTable.finalY + 30;
+    const finalY = (doc as any).lastAutoTable.finalY + 40;
     doc.line(40, finalY, 90, finalY);
     doc.text('Assinatura do Responsável', 45, finalY + 5);
 
@@ -95,37 +105,52 @@ export function gerarProtocoloEntrega(processo: ProcessoTFD) {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Adicionar logotipo
+    try {
+        const logoPath = '/logo_pref.png';
+        doc.addImage(logoPath, 'PNG', pageWidth / 2 - 20, 8, 40, 40);
+    } catch (err) {
+        console.error('Erro ao carregar logotipo:', err);
+    }
+
+    // Cabeçalho
     doc.setFontSize(10);
-    doc.text('DIRCA - TFDPBS', 20, 15);
-    doc.text(format(new Date(), "dd/MM/yyyy HH:mm"), pageWidth - 60, 15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PREFEITURA MUNICIPAL DE PARAUAPEBAS', pageWidth / 2, 52, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text('SECRETARIA MUNICIPAL DE SAÚDE', pageWidth / 2, 57, { align: 'center' });
+    doc.text('DIRETORIA DE REGULAÇÃO CONTROLE E AVALIAÇÃO', pageWidth / 2, 62, { align: 'center' });
+
+    doc.setLineWidth(0.5);
+    doc.line(20, 68, pageWidth - 20, 68);
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('PROTOCOLO DE ENTREGA DE DOCUMENTAÇÃO', pageWidth / 2, 30, { align: 'center' });
+    doc.text('PROTOCOLO DE ENTREGA DE DOCUMENTAÇÃO', pageWidth / 2, 80, { align: 'center' });
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const text = `Declaramos para os devidos fins que o(a) Sr(a) ${processo.paciente?.nome}, CPF ${processo.paciente?.cpf}, entregou nesta data a documentação referente ao processo ${processo.numero} para solicitação de Tratamento Fora de Domicílio na especialidade de ${processo.especialidade}.`;
 
     const splitText = doc.splitTextToSize(text, pageWidth - 40);
-    doc.text(splitText, 20, 45);
+    doc.text(splitText, 20, 95);
 
-    doc.text('Documentos conferidos:', 20, 70);
-    doc.text('- Laudo Médico para TFD', 25, 78);
-    doc.text('- Cópias de Documentos Pessoais (RG/CPF)', 25, 84);
-    doc.text('- Comprovante de Residência', 25, 90);
-    doc.text('- Cartão do SUS', 25, 96);
-    doc.text('- Exames Complementares', 25, 102);
+    doc.text('Documentos conferidos:', 20, 110);
+    doc.text('- Laudo Médico para TFD', 25, 118);
+    doc.text('- Cópias de Documentos Pessoais (RG/CPF)', 25, 124);
+    doc.text('- Comprovante de Residência', 25, 130);
+    doc.text('- Cartão do SUS', 25, 136);
+    doc.text('- Exames Complementares', 25, 142);
 
     doc.setFont('helvetica', 'bold');
-    doc.text('IMPORTANTE:', 20, 115);
+    doc.text('IMPORTANTE:', 20, 155);
     doc.setFont('helvetica', 'normal');
-    doc.text('O acompanhamento da situação do processo pode ser feito via portal:', 20, 122);
+    doc.text('O acompanhamento da situação do processo pode ser feito via portal:', 20, 162);
     doc.setTextColor(37, 99, 235);
-    doc.text('http://tfd-acompanha.saude.am.gov.br/consulta', 20, 128);
+    doc.text('http://tfd-acompanha.saude.am.gov.br/consulta', 20, 168);
     doc.setTextColor(0, 0, 0);
 
-    const finalY = 160;
+    const finalY = 200;
     doc.line(pageWidth / 2 - 40, finalY, pageWidth / 2 + 40, finalY);
     doc.text('Assinatura do Paciente / Responsável', pageWidth / 2, finalY + 5, { align: 'center' });
 
