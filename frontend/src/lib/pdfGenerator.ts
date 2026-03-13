@@ -148,9 +148,7 @@ export function gerarProtocoloEntrega(processo: ProcessoTFD) {
     doc.setFont('helvetica', 'bold');
     doc.text('IMPORTANTE:', 20, 155);
     doc.setFont('helvetica', 'normal');
-    doc.text('O acompanhamento da situação do processo pode ser feito via portal:', 20, 162);
-    doc.setTextColor(37, 99, 235);
-    doc.text('http://tfd-acompanha.saude.am.gov.br/consulta', 20, 168);
+    doc.text('O acompanhamento da situação do processo pode ser feito via portal da SEMSA.', 20, 162);
     doc.setTextColor(0, 0, 0);
 
     const finalY = 200;

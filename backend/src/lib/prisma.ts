@@ -10,7 +10,7 @@ export type PrismaInstance = PrismaClient;
 export const prisma =
     global.prisma ||
     new PrismaClient({
-        log: ['query', 'error', 'warn'],
+        log: ['error', 'warn'],
     });
 
 export const selectUsuarioPublico = { id: true, nome: true, perfil: true };
