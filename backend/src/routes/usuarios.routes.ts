@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logAction } from '../lib/logger';
+import { validatePassword, validarCPF } from '../utils/validation';
 
 export const usuariosRouter = Router();
 usuariosRouter.use(authenticate);
@@ -17,7 +18,25 @@ function getParam(params: Request['params'], key: string): string {
 const usuarioSchema = z.object({
     nome: z.string().min(3),
     login: z.string().min(3),
-    senha: z.string().min(6).optional(),
+    senha: z.string()
+        .min(8, 'Senha deve ter no mínimo 8 caracteres')
+        .refine(
+            (s) => /[A-Z]/.test(s),
+            'Senha deve conter pelo menos uma letra maiúscula'
+        )
+        .refine(
+            (s) => /[a-z]/.test(s),
+            'Senha deve conter pelo menos uma letra minúscula'
+        )
+        .refine(
+            (s) => /[0-9]/.test(s),
+            'Senha deve conter pelo menos um número'
+        )
+        .refine(
+            (s) => /[^A-Za-z0-9]/.test(s),
+            'Senha deve conter pelo menos um caractere especial'
+        )
+        .optional(),
     perfil: z.enum(['UBS', 'REGULACAO', 'SEC_ADM', 'ATENDENTE']),
     unidadeId: z.string().uuid().optional().nullable(),
     ativo: z.boolean().optional(),
@@ -37,7 +56,24 @@ const selectSemSenha = {
 
 const senhaSchema = z.object({
     senhaAtual: z.string().min(1, 'Senha atual é obrigatória'),
-    novaSenha: z.string().min(6, 'Nova senha deve ter no mínimo 6 caracteres'),
+    novaSenha: z.string()
+        .min(8, 'Nova senha deve ter no mínimo 8 caracteres')
+        .refine(
+            (s) => /[A-Z]/.test(s),
+            'Nova senha deve conter pelo menos uma letra maiúscula'
+        )
+        .refine(
+            (s) => /[a-z]/.test(s),
+            'Nova senha deve conter pelo menos uma letra minúscula'
+        )
+        .refine(
+            (s) => /[0-9]/.test(s),
+            'Nova senha deve conter pelo menos um número'
+        )
+        .refine(
+            (s) => /[^A-Za-z0-9]/.test(s),
+            'Nova senha deve conter pelo menos um caractere especial'
+        ),
 });
 
 usuariosRouter.patch('/me/senha', async (req: Request, res: Response) => {

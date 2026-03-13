@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logAction } from '../lib/logger';
+import { validarCPF } from '../utils/validation';
 
 export const pacientesRouter = Router();
 pacientesRouter.use(authenticate);
@@ -22,7 +23,12 @@ function getParam(params: Request['params'], key: string): string {
 
 const pacienteSchema = z.object({
     nome: z.string().min(3),
-    cpf: z.string().length(11),
+    cpf: z.string()
+        .length(11, 'CPF deve ter 11 dígitos')
+        .refine(
+            (cpf) => validarCPF(cpf),
+            'CPF inválido'
+        ),
     dataNascimento: z.string().transform(v => new Date(v)),
     sexo: z.enum(['MASCULINO', 'FEMININO']),
     nomeMae: z.string().min(3),

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
-import { upload } from '../lib/upload';
+import { upload, validateFileContent } from '../lib/upload';
 import { z } from 'zod';
 import { prisma, selectUsuarioPublico } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
@@ -35,6 +35,18 @@ processosRouter.post('/:id/documentos', authorize('UBS', 'ATENDENTE', 'SEC_ADM',
     const processoId = getParam(req.params, 'id');
     const { tipo } = req.body;
     if (!multerReq.file) return res.status(400).json({ error: 'Arquivo não enviado.' });
+    
+    // Validar conteúdo real do arquivo
+    const fs = await import('fs');
+    const fileBuffer = fs.readFileSync(multerReq.file.path);
+    const isValid = await validateFileContent(fileBuffer);
+    
+    if (!isValid) {
+        // Remover arquivo inválido
+        fs.unlinkSync(multerReq.file.path);
+        return res.status(400).json({ error: 'Tipo de arquivo inválido ou conteúdo não permitido.' });
+    }
+    
     const processo = await prisma.processoTFD.findUnique({ where: { id: processoId } });
     if (!processo) return res.status(404).json({ error: 'Processo não encontrado.' });
     const url = `/uploads/${multerReq.file.filename}`;

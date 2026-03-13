@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { logAction } from '../lib/logger';
+import { validatePassword } from '../utils/validation';
 
 export const authRouter = Router();
 
@@ -84,5 +85,25 @@ authRouter.get('/me', async (req: Request, res: Response) => {
         res.json(usuario);
     } catch {
         res.status(401).json({ error: 'Token inválido.' });
+    }
+});
+
+// Endpoint para validar força da senha
+authRouter.post('/validate-password', (req: Request, res: Response) => {
+    try {
+        const { password } = z.object({ password: z.string() }).parse(req.body);
+        const result = validatePassword(password);
+        
+        if (result.valid) {
+            res.json({ valid: true, message: 'Senha forte' });
+        } else {
+            res.status(400).json({ valid: false, errors: result.errors });
+        }
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            res.status(400).json({ error: err.errors });
+            return;
+        }
+        throw err;
     }
 });

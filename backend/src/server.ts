@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { authRouter } from './routes/auth.routes';
@@ -27,10 +29,35 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3333;
 
+// Security headers
+app.use(helmet());
+
+// Rate limiting geral
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // 100 requisições por IP
+    message: { error: 'Muitas requisições deste IP, tente novamente mais tarde.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Rate limiting específico para login (prevenir força bruta)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // 5 tentativas de login por 15min
+    message: { error: 'Muitas tentativas de login, tente novamente mais tarde.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
     credentials: true,
 }));
+
+app.use('/api/auth/login', loginLimiter);
+app.use(generalLimiter);
+
 app.use(express.json());
 
 // Servir arquivos estáticos da pasta uploads
